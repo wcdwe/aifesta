@@ -50,6 +50,7 @@ import tax_calculator  # noqa: E402
 import product_ranking  # noqa: E402
 import institution_facts  # noqa: E402
 from agent_v2.pre_router import pre_route  # noqa: E402
+from agent_v2.document_path import try_simple_product_document  # noqa: E402
 from agent_v2.structured_path import try_fast_structured  # noqa: E402
 from agent_v2.templates import build_policy_payload  # noqa: E402
 
@@ -468,6 +469,10 @@ def answer_payload(question_id: str, question: str) -> dict:
         structured_body = try_fast_structured(question_id, question)
         if structured_body is not None:
             return structured_body
+    if pre_decision.route == "SIMPLE_DOCUMENT":
+        document_body = try_simple_product_document(question_id, question)
+        if document_body is not None:
+            return document_body
 
     # 세제 계산 질의(세액공제/연금소득세/퇴직소득세감면/기타소득세)는
     # 상품과 무관하고 답이 순전히 규칙 계산이라, 상품 조회·검색보다

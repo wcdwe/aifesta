@@ -1,6 +1,7 @@
 import unittest
 
 from agent_v2.pre_router import assess_risk, pre_route
+from agent_v2.document_path import _usable, try_simple_product_document
 from agent_v2.product_resolver import resolve_product
 from agent_v2.schemas import ValidationResult
 from agent_v2.structured_path import try_fast_structured
@@ -93,6 +94,22 @@ class FastStructuredTests(unittest.TestCase):
     def test_ambiguous_family_is_not_arbitrarily_selected(self):
         result = try_fast_structured("Q", "솔로몬 국공채 펀드 총보수 알려줘")
         self.assertIsNone(result)
+
+
+class SimpleDocumentTests(unittest.TestCase):
+    def test_cover_and_toc_are_rejected(self):
+        self.assertFalse(_usable({"doc_id": "d", "page": 1, "text": "(표지) 투자설명서"}))
+        self.assertFalse(_usable({"doc_id": "d", "page": 2, "text": "1. 투자전략"}))
+
+    def test_product_document_path_is_scoped_and_cited(self):
+        result = try_simple_product_document("Q", "미래에셋장기성장포커스 투자전략은 뭐야?")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route"], "rag")
+        self.assertIn("p.", result["answer"])
+        self.assertIn("상품 문서 Hybrid RAG", result["think_trace"])
+
+    def test_institution_question_is_left_for_existing_path(self):
+        self.assertIsNone(try_simple_product_document("Q", "IRP가 무엇인지 설명해줘"))
 
 
 if __name__ == "__main__":
