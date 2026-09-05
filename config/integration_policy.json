@@ -12,10 +12,17 @@
   "merge_policy": {
     "overwrite_existing_processed": false,
     "auto_accept_equal_values": true,
-    "auto_fill_missing_values": false,
-    "conflicting_values": "REVIEW_REQUIRED",
+    "auto_fill_missing_values": true,
+    "conflicting_values": "SUHYEON_WINS_FOR_CLASS_AND_QUANTITATIVE_DATA",
     "missing_dates": "REVIEW_REQUIRED",
     "exact_duplicate_documents": "INDEX_CANONICAL_ONLY"
+  },
+  "authoritative_sources": {
+    "fund_identity_and_duplicate_registry": "pension",
+    "class_details": "suhyeon",
+    "quantitative_data": "suhyeon",
+    "rag_content": "suhyeon",
+    "search_and_api": "suhyeon"
   },
   "rag": {
     "source": "suhyeon_page_text",

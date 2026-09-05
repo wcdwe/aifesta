@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build non-destructive integrated datasets from pension + suhyeon outputs.
+"""Build integrated datasets with suhyeon as the runtime data authority.
 
-The existing data/processed files remain the canonical baseline.  This script
-writes only to data/integrated and data/validation/integration_*.
+The existing data/processed files remain an immutable comparison baseline.
+Class details and quantitative runtime values come from suhyeon staging. This
+script writes only to data/integrated and data/validation/integration_*.
 """
 
 from __future__ import annotations
@@ -269,8 +270,6 @@ def main():
             ):
                 if not same_number(mine.get(mine_field), fee.get(team_field)):
                     current_value, incoming_value = mine.get(mine_field), fee.get(team_field)
-                    dash_zero = str(incoming_value).strip() == "-" and number(current_value) == 0
-                    missing_side = number(current_value) is None or number(incoming_value) is None
                     conflicts.append({
                         "entity_type": "class", "entity_id": class_id,
                         "product_code": code, "class_code": class_code,
@@ -278,9 +277,9 @@ def main():
                         "incoming_value": incoming_value,
                         "current_source": mine.get("source_doc_id", ""),
                         "incoming_source": f"class_fees:{fee.get('page', '')}",
-                        "resolution": "EQUIVALENT_ZERO" if dash_zero else ("FILL_CANDIDATE" if missing_side else ""),
-                        "resolution_reason": "Dash denotes no fee" if dash_zero else ("One source is missing a numeric value" if missing_side else ""),
-                        "review_status": "RESOLVED" if dash_zero else "REVIEW_REQUIRED",
+                        "resolution": "USE_INCOMING_SUHYEON",
+                        "resolution_reason": "Suhyeon is authoritative for class and quantitative runtime data",
+                        "review_status": "RESOLVED",
                     })
     write_csv(OUT / "class_enrichment.csv", class_rows)
 
@@ -407,6 +406,7 @@ def main():
         "yearly_return_outliers": sum(r["quality_status"] != "NORMAL" for r in yearly_rows),
         "invariants": {
             "existing_processed_untouched": True,
+            "runtime_class_and_quantitative_source": "suhyeon",
             "all_team_products_mapped": len(product_rows) == len(master_codes),
             "product_code_unique": len(product_rows) == len({r['product_code'] for r in product_rows}),
         },

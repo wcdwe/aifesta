@@ -9,7 +9,8 @@ Python extraction/search pipeline from the `suhyeon` branch.
 - Incoming JSON is preserved under `data/staging/suhyeon`.
 - Generated combined data is written only under `data/integrated`.
 - Value disagreements are written to
-  `data/validation/integration_conflicts.csv`; they are not silently resolved.
+  `data/validation/integration_conflicts.csv` for audit. For class details and
+  quantitative runtime fields, the suhyeon value is authoritative.
 - Exact duplicate PDFs are indexed once, while all product-code aliases remain
   searchable through `fund_products.csv`.
 
@@ -31,6 +32,15 @@ Detailed build order:
 
 The source views use hard links and are disposable. They do not duplicate or
 modify the original documents.
+
+## Runtime authority
+
+- Pension remains authoritative for fund IDs, duplicate-document groups, and
+  source-quality records.
+- Suhyeon is authoritative for class details, fees, returns, AUM, asset mix,
+  RAG content, search, and API behavior.
+- `data/processed` remains untouched as a rollback/audit baseline; runtime
+  reads the regenerated `data/integrated` store.
 
 ## Updating from suhyeon
 

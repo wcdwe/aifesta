@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-05T21:12:45.494712+00:00",
+  "generated_at": "2026-09-05T21:38:58.092933+00:00",
   "status": "passed",
   "baseline": {
     "documents": 94,
@@ -25,11 +25,12 @@
   },
   "mapping_errors": 0,
   "conflicts_total": 378,
-  "conflicts_for_review": 343,
-  "conflicts_resolved_by_policy": 35,
+  "conflicts_for_review": 3,
+  "conflicts_resolved_by_policy": 375,
   "yearly_return_outliers": 1,
   "invariants": {
     "existing_processed_untouched": true,
+    "runtime_class_and_quantitative_source": "suhyeon",
     "all_team_products_mapped": true,
     "product_code_unique": true
   }
