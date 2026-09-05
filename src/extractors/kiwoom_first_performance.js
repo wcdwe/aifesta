@@ -1,0 +1,2 @@
+function extractKiwoomFirstPerformance(){const p=['1Y','2Y','3Y','5Y','SINCE_INCEPTION'],v=[3.69,3.63,2.86,1.80,2.47],b=[3.90,3.74,3.24,2.26,.77];return p.map((period,i)=>({class_id:'CLASS000951',fund_id:'FUND000080',period,return_pct:v[i],benchmark_return_pct:b[i],as_of_date:'2025-03-25',source_doc_id:'DOC000082',source_page:'3|32',source_text:`[p.3,32] 연평균 수익률; 투자신탁; ${period} ${v[i]}%; 비교지수 ${b[i]}%`}));}
+module.exports={extractKiwoomFirstPerformance};

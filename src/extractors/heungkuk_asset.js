@@ -1,0 +1,8 @@
+const path=require('path');
+const COMPANY='흥국자산운용';
+const docs=[
+ {doc_id:'DOC000010',fund_id:'FUND000010',file:'R2_KR5139420015.pdf',date:'2025-06-25',effective:'2025-07-30',pages:60,name:'흥국멀티크레딧증권자투자신탁 [채권]',norm:'흥국멀티크레딧증권자투자신탁',code:'85028',inception:'2008-06-26'},
+ {doc_id:'DOC000011',fund_id:'FUND000011',file:'R2_KR5139420020.pdf',date:'2025-09-29',effective:'2025-11-05',pages:54,name:'흥국퇴직연금멀티크레딧증권자투자신탁 [채권]',norm:'흥국퇴직연금멀티크레딧증권자투자신탁',code:'AP577',inception:'2014-03-09'}
+];
+function extractHeungkukPhase1(root,extractionDate){const base=path.join(root,'data','투자설명서',COMPANY);return{documents:docs.map(x=>({doc_id:x.doc_id,company_name:COMPANY,file_name:x.file,file_path:path.relative(root,path.join(base,x.file)).replaceAll('\\','/'),document_type:'투자설명서',document_date:x.date,effective_date:x.effective,fund_id:x.fund_id,total_pages:x.pages,extraction_date:extractionDate})),funds:docs.map(x=>({fund_id:x.fund_id,company_name:COMPANY,fund_name_raw:x.name,fund_name_normalized:x.norm,fund_code:x.code,management_company:'흥국자산운용 주식회사',asset_type_l1:'채권형',asset_type_l2:'국내채권',investment_region:'국내',investment_target:'국내 채권 및 기업어음에 투자하는 모투자신탁',risk_grade:5,risk_grade_text:'5등급(낮은 위험)',benchmark:'KIS 중단기지수 1-2Y*100%',volatility:null,inception_date:x.inception,currency_hedge:null,fund_structure:'투자신탁|증권(채권형)|개방형|추가형|종류형|모자형 자투자신탁',tdf_vintage:null,bond_duration_bucket:'1-2년',source_doc_id:x.doc_id,source_page:x.fund_id==='FUND000010'?'1|2|9|20|23|42|45':'1|2|9|20|23|36|38',source_text:`[p.1] ${x.name}; 작성기준일 ${x.date}; 효력발생일 ${x.effective}; 5등급(낮은 위험) | [p.2] 펀드코드 ${x.code} | [전략] 국내 채권 및 기업어음; 비교지수 KIS 중단기지수 1-2Y*100% | [성과] 최초설정일 ${x.inception}`}))};}
+module.exports={COMPANY,extractHeungkukPhase1};

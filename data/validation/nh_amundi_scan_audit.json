@@ -1,0 +1,265 @@
+{
+  "company_name": "NH-Amundi자산운용",
+  "generated_at": "2026-09-01T02:41:02.594Z",
+  "source_pdf_count": 4,
+  "unique_fund_group_count": 4,
+  "duplicate_fund_groups": [],
+  "exact_duplicate_groups": [],
+  "documents": [
+    {
+      "file_name": "R2_KR5144420020.pdf",
+      "sha256": "f65b36a28194141f093836fd59dc14fb476effdd23618e57b4e86f236854b9e3",
+      "total_pages": 74,
+      "fund_name": "NH-Amundi 국채 10 년 인덱스 증권자투자신탁 [ 채권 ]",
+      "fund_code": "AT974",
+      "document_date": "2025년9월1일",
+      "effective_date": "2025년11월6일",
+      "risk_grade": 4,
+      "key_pages": {
+        "class_codes": [],
+        "fees": [
+          4,
+          5,
+          26,
+          30,
+          32,
+          33,
+          34,
+          35
+        ],
+        "performance": [
+          5,
+          6,
+          15,
+          53,
+          54
+        ],
+        "annual_returns": [
+          53,
+          55,
+          56
+        ],
+        "aum": [
+          7,
+          19,
+          28,
+          39,
+          40,
+          41,
+          42,
+          43,
+          56,
+          57,
+          66
+        ],
+        "benchmark": [
+          6,
+          20,
+          22,
+          39,
+          42,
+          43,
+          53,
+          54,
+          55,
+          56,
+          74
+        ],
+        "inception": [
+          5,
+          25,
+          34,
+          40,
+          42,
+          53,
+          69
+        ]
+      }
+    },
+    {
+      "file_name": "R2_KR5144420081.pdf",
+      "sha256": "4b23e652a94d33d0978c2707163bf7336ce428c4406a0253f777c70da8bd16cc",
+      "total_pages": 76,
+      "fund_name": "NH - Amundi USD 초단기채권 증권자투자신탁 (UH)[ 채권 ]",
+      "fund_code": "CJ517",
+      "document_date": "2025년1월25일",
+      "effective_date": "2025년6월18일",
+      "risk_grade": 4,
+      "key_pages": {
+        "class_codes": [],
+        "fees": [
+          5,
+          10,
+          17,
+          28,
+          31,
+          33,
+          34,
+          35
+        ],
+        "performance": [
+          6,
+          15,
+          54,
+          55
+        ],
+        "annual_returns": [
+          54,
+          56,
+          57
+        ],
+        "aum": [
+          7,
+          19,
+          20,
+          30,
+          34,
+          40,
+          41,
+          42,
+          43,
+          44,
+          57,
+          58,
+          66
+        ],
+        "benchmark": [
+          6,
+          21,
+          44,
+          54,
+          55,
+          56,
+          76
+        ],
+        "inception": [
+          6,
+          20,
+          27,
+          33,
+          41,
+          42,
+          43,
+          54,
+          70,
+          73
+        ]
+      }
+    },
+    {
+      "file_name": "R2_KR5144420091.pdf",
+      "sha256": "28894b3dcfdf6434ac366aad008b48c00a498937a35fd81f1f58ab2d76e77b74",
+      "total_pages": 70,
+      "fund_name": "NH-Amundi 하나로 단기채 증권투자신탁 [ 채권 ]",
+      "fund_code": "C8459",
+      "document_date": "2025년9월14일",
+      "effective_date": "2025년11월20일",
+      "risk_grade": 6,
+      "key_pages": {
+        "class_codes": [],
+        "fees": [
+          5,
+          10,
+          29,
+          32,
+          35
+        ],
+        "performance": [
+          5,
+          6,
+          15,
+          48,
+          49,
+          50
+        ],
+        "annual_returns": [
+          48,
+          50,
+          51
+        ],
+        "aum": [
+          7,
+          20,
+          21,
+          22,
+          31,
+          36,
+          52,
+          60
+        ],
+        "benchmark": [
+          5,
+          6,
+          23,
+          49,
+          50,
+          51,
+          70
+        ],
+        "inception": [
+          5,
+          22,
+          23,
+          35,
+          49,
+          64,
+          68
+        ]
+      }
+    },
+    {
+      "file_name": "R2_KR5144450095.pdf",
+      "sha256": "2f1638b75ffd8ff562282d398e50271014d51ec92b988f2292760ef69fc35daa",
+      "total_pages": 72,
+      "fund_name": "NH-Amundi 필승 코리아 증권투자신탁 [ 주식 ]",
+      "fund_code": "C9946",
+      "document_date": "2025년8월14일",
+      "effective_date": "2025년10월21일",
+      "risk_grade": 2,
+      "key_pages": {
+        "class_codes": [],
+        "fees": [
+          5,
+          6,
+          10,
+          30,
+          33,
+          36
+        ],
+        "performance": [
+          6,
+          15,
+          16,
+          51,
+          52
+        ],
+        "annual_returns": [
+          51,
+          53,
+          54
+        ],
+        "aum": [
+          7,
+          20,
+          21,
+          22,
+          23,
+          32,
+          54
+        ],
+        "benchmark": [
+          72
+        ],
+        "inception": [
+          6,
+          23,
+          36,
+          51,
+          65,
+          66,
+          70
+        ]
+      }
+    }
+  ]
+}

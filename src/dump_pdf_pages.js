@@ -1,0 +1,2 @@
+const fs=require('fs'),path=require('path');
+(async()=>{const [company,file,...pageArgs]=process.argv.slice(2),pages=pageArgs.map(Number),pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs'),p=path.join(__dirname,'..','data','투자설명서',company,file),pdf=await pdfjs.getDocument({data:new Uint8Array(fs.readFileSync(p)),disableWorker:true}).promise;for(const n of pages){const items=(await(await pdf.getPage(n)).getTextContent()).items;console.log(`\n=== PAGE ${n} ===\n`+items.map(x=>x.str).join(' ').replace(/\s+/g,' '))}})().catch(e=>{console.error(e);process.exitCode=1});

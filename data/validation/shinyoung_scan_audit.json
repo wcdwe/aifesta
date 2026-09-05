@@ -1,0 +1,143 @@
+{
+  "company_name": "신영자산운용",
+  "generated_at": "2026-09-01T14:07:06.817Z",
+  "source_pdf_count": 2,
+  "unique_fund_group_count": 2,
+  "duplicate_fund_groups": [],
+  "exact_duplicate_groups": [],
+  "documents": [
+    {
+      "file_name": "R2_KR5125450023.pdf",
+      "sha256": "b943a9f7836e8febf1d4831148af0655c12d21c18ad28b641e41d1931510db7d",
+      "total_pages": 61,
+      "fund_name": null,
+      "fund_code": "67646",
+      "document_date": null,
+      "effective_date": null,
+      "risk_grade": 2,
+      "key_pages": {
+        "class_codes": [
+          9,
+          11,
+          60
+        ],
+        "fees": [
+          3,
+          8,
+          15,
+          27,
+          30,
+          31,
+          55
+        ],
+        "performance": [
+          4,
+          13,
+          42,
+          44
+        ],
+        "annual_returns": [
+          42,
+          44
+        ],
+        "aum": [
+          5,
+          15,
+          16,
+          17,
+          18,
+          19,
+          25,
+          36,
+          46,
+          47,
+          60
+        ],
+        "benchmark": [
+          4,
+          18,
+          19,
+          43,
+          44,
+          45,
+          46
+        ],
+        "inception": [
+          4,
+          16,
+          17,
+          18,
+          30,
+          42,
+          45
+        ]
+      }
+    },
+    {
+      "file_name": "R2_KR5125450070.pdf",
+      "sha256": "072484c7eadf59027a97d38f5f0e6d95067db3aceb731669cc23c9566cfee97f",
+      "total_pages": 59,
+      "fund_name": null,
+      "fund_code": "52803",
+      "document_date": null,
+      "effective_date": null,
+      "risk_grade": 2,
+      "key_pages": {
+        "class_codes": [
+          9,
+          11,
+          58
+        ],
+        "fees": [
+          3,
+          4,
+          8,
+          26,
+          28,
+          53
+        ],
+        "performance": [
+          4,
+          13,
+          40,
+          42
+        ],
+        "annual_returns": [
+          40,
+          42
+        ],
+        "aum": [
+          5,
+          15,
+          16,
+          17,
+          18,
+          24,
+          34,
+          44,
+          45,
+          58
+        ],
+        "benchmark": [
+          4,
+          18,
+          40,
+          41,
+          42,
+          43,
+          44
+        ],
+        "inception": [
+          4,
+          15,
+          16,
+          17,
+          18,
+          28,
+          40,
+          43
+        ]
+      }
+    }
+  ]
+}

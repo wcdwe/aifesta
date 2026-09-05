@@ -1,0 +1,2 @@
+const fs=require('fs'),path=require('path'),a=JSON.parse(fs.readFileSync(path.join(__dirname,'..','data','validation','kiwoom_batch_audit.json'),'utf8')),i=Number(process.argv[2]||0),x=a[i];
+console.log(JSON.stringify({index:i,file:x.file,total_pages:x.total_pages}));for(const k of ['cover','summary','classes','fees','performance','aum','risk'])if(x[k])console.log(`\n=== ${k.toUpperCase()} PAGE ${x[k].page} ===\n${x[k].text}`);

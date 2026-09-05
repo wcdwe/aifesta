@@ -1,0 +1,44 @@
+[
+  {
+    "file_name": "R2_KR5174420011.pdf",
+    "company_name": "한국투자밸류자산운용",
+    "fund_id": "FUND000019",
+    "fund_name": "한국밸류10년투자연금증권전환형자투자신탁1호",
+    "class_id": "CLASS000241",
+    "class_code": "AP738",
+    "class_name": "수수료미징구-오프라인-개인연금(C)",
+    "class_inception_date": "2011-07-19",
+    "class_inception_status": "ESTABLISHED",
+    "source_page": "35",
+    "source_text": "연평균 수익률 표의 종류별 설정일 2011-07-19",
+    "reason": "PDF 원문에 명시된 클래스별 설정일을 적재"
+  },
+  {
+    "file_name": "R2_KR5174420011.pdf",
+    "company_name": "한국투자밸류자산운용",
+    "fund_id": "FUND000019",
+    "fund_name": "한국밸류10년투자연금증권전환형자투자신탁1호",
+    "class_id": "CLASS000242",
+    "class_code": "AP739",
+    "class_name": "수수료미징구-온라인슈퍼-개인연금(S-P)",
+    "class_inception_date": "2014-04-22",
+    "class_inception_status": "ESTABLISHED",
+    "source_page": "35",
+    "source_text": "연평균 수익률 표의 종류별 설정일 2014-04-22",
+    "reason": "PDF 원문에 명시된 클래스별 설정일을 적재"
+  },
+  {
+    "file_name": "R2_KR5174420011.pdf",
+    "company_name": "한국투자밸류자산운용",
+    "fund_id": "FUND000019",
+    "fund_name": "한국밸류10년투자연금증권전환형자투자신탁1호",
+    "class_id": "CLASS000243",
+    "class_code": "BG326",
+    "class_name": "수수료미징구-온라인-개인연금(C-E)",
+    "class_inception_date": "2017-05-08",
+    "class_inception_status": "ESTABLISHED",
+    "source_page": "35",
+    "source_text": "연평균 수익률 표의 종류별 설정일 2017-05-08",
+    "reason": "PDF 원문에 명시된 클래스별 설정일을 적재"
+  }
+]

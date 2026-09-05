@@ -1,0 +1,786 @@
+{
+  "generated_at": "2026-09-05T09:41:45.508Z",
+  "scope": {
+    "documents": 94,
+    "funds": 92,
+    "classes": 1071,
+    "performance_rows": 3631,
+    "aum_rows": 80,
+    "chunks": 4329,
+    "source_issues": 14
+  },
+  "status_legend": {
+    "READY": "구조화 데이터만으로 안정적으로 답변 가능",
+    "READY_WITH_RAG": "구조화 데이터와 원문 청크를 함께 사용하면 가능",
+    "PARTIAL": "일부 상품 또는 필드만 가능",
+    "CONDITIONAL": "정규화·기준일 통제 또는 대화 로직 필요",
+    "AGENT_REQUIRED": "데이터보다 에이전트 정책 구현이 핵심",
+    "NOT_READY": "현재 데이터 범위 밖"
+  },
+  "structured_coverage": {
+    "basic": {
+      "fund_name": 100,
+      "company": 100,
+      "asset_type_l1": 100,
+      "investment_target": 100,
+      "inception_date": 96.7,
+      "inception_status": 100,
+      "scheduled_inception_date": 1.1,
+      "fund_structure": 100
+    },
+    "performance": {
+      "funds_with_any_performance": 95.7,
+      "funds_with_fund_level_1y": 30.4,
+      "rows_with_as_of_date": 100,
+      "rows_with_benchmark": 91,
+      "classes_with_performance": 72.1
+    },
+    "fees": {
+      "funds_with_classes": 100,
+      "classes_with_total_fee": 98.6,
+      "classes_with_total_expense_ratio": 96.9,
+      "time_dependent_fee_rows": 56
+    },
+    "classes": {
+      "classes": 1071,
+      "account_type": 100,
+      "channel": 100,
+      "front_load": 100,
+      "class_inception_date": 52.4,
+      "class_inception_status": 100,
+      "mirae_classes": 202,
+      "mirae_class_inception_status": 100,
+      "class_inception_rag_funds": 92,
+      "eligibility_in_rag_funds": 100
+    },
+    "risk": {
+      "risk_grade": 100,
+      "volatility": 51.1,
+      "risk_rag_funds": 100
+    },
+    "aum": {
+      "funds_with_aum": 87,
+      "rows_with_as_of_date": 100,
+      "normalized_krw": 100
+    },
+    "dates": {
+      "document_date": 100,
+      "effective_date": 100,
+      "performance_as_of_date": 100,
+      "aum_as_of_date": 100
+    },
+    "rag": {
+      "strategy_funds": 100,
+      "risk_funds": 100,
+      "fees_funds": 100,
+      "purchase_redemption_funds": 100,
+      "tax_funds": 98.9,
+      "source_issue_chunks": 14
+    }
+  },
+  "dataset_segments": {
+    "equity_funds": 40,
+    "bond_related_funds": 52,
+    "mixed_or_fund_of_funds": 2,
+    "tdf_candidates": 0,
+    "tdf_with_vintage": 0,
+    "explicit_tdf_vintage_rows": 0,
+    "lifecycle_like_funds": [
+      {
+        "fund_id": "FUND000057",
+        "fund_name": "미래에셋라이프사이클7090연금증권전환형자투자신탁1호(채권)"
+      },
+      {
+        "fund_id": "FUND000064",
+        "fund_name": "미래에셋라이프사이클2030연금증권전환형자투자신탁1호(주식)"
+      }
+    ],
+    "same_date_1y_ranking_cohorts": [
+      {
+        "as_of_date": "2025-09-01",
+        "fund_count": 2
+      },
+      {
+        "as_of_date": "2025-12-31",
+        "fund_count": 2
+      }
+    ]
+  },
+  "coverage_gaps": {
+    "missing_inception_date": [
+      {
+        "fund_id": "FUND000006",
+        "fund_name": "KCGI코리아목표전환형4호",
+        "inception_status": "NOT_ESTABLISHED",
+        "scheduled_date": null
+      },
+      {
+        "fund_id": "FUND000016",
+        "fund_name": "VIP한국형가치투자증권자투자신탁",
+        "inception_status": "NOT_ESTABLISHED",
+        "scheduled_date": "2023-04-03"
+      },
+      {
+        "fund_id": "FUND000062",
+        "fund_name": "미래에셋프리미엄크레딧초단기증권투자신탁(채권)",
+        "inception_status": "NOT_ESTABLISHED",
+        "scheduled_date": null
+      }
+    ],
+    "unresolved_inception_status": [],
+    "missing_any_performance": [
+      {
+        "fund_id": "FUND000006",
+        "fund_name": "KCGI코리아목표전환형4호"
+      },
+      {
+        "fund_id": "FUND000016",
+        "fund_name": "VIP한국형가치투자증권자투자신탁"
+      },
+      {
+        "fund_id": "FUND000048",
+        "fund_name": "삼성코리아중기채권증권자투자신탁제1호[채권]"
+      },
+      {
+        "fund_id": "FUND000062",
+        "fund_name": "미래에셋프리미엄크레딧초단기증권투자신탁(채권)"
+      }
+    ],
+    "missing_aum": [
+      {
+        "fund_id": "FUND000001",
+        "fund_name": "마이다스우량채권"
+      },
+      {
+        "fund_id": "FUND000002",
+        "fund_name": "마이다스책임투자"
+      },
+      {
+        "fund_id": "FUND000003",
+        "fund_name": "마이다스거북이90"
+      },
+      {
+        "fund_id": "FUND000006",
+        "fund_name": "KCGI코리아목표전환형4호"
+      },
+      {
+        "fund_id": "FUND000016",
+        "fund_name": "VIP한국형가치투자증권자투자신탁"
+      },
+      {
+        "fund_id": "FUND000036",
+        "fund_name": "한화내일받는단기국공채증권자투자신탁"
+      },
+      {
+        "fund_id": "FUND000047",
+        "fund_name": "삼성클래식연금증권전환형투자신탁제1호[채권]"
+      },
+      {
+        "fund_id": "FUND000048",
+        "fund_name": "삼성코리아중기채권증권자투자신탁제1호[채권]"
+      },
+      {
+        "fund_id": "FUND000049",
+        "fund_name": "삼성퇴직연금인덱스12M증권자투자신탁제1호[채권]"
+      },
+      {
+        "fund_id": "FUND000050",
+        "fund_name": "삼성클래식연금증권전환형자투자신탁제1호[주식]"
+      },
+      {
+        "fund_id": "FUND000051",
+        "fund_name": "삼성퇴직연금KOSPI200증권자투자신탁제1호[주식]"
+      },
+      {
+        "fund_id": "FUND000062",
+        "fund_name": "미래에셋프리미엄크레딧초단기증권투자신탁(채권)"
+      }
+    ],
+    "missing_tax_rag": [
+      {
+        "fund_id": "FUND000009",
+        "fund_name": "베어링고배당증권투자회사"
+      }
+    ]
+  },
+  "requested_question_categories": [
+    {
+      "id": "single_product_basic",
+      "name": "단일 상품 기본 정보",
+      "status": "READY",
+      "evidence": [
+        "펀드 92건",
+        {
+          "fund_name": 100,
+          "company": 100,
+          "asset_type_l1": 100,
+          "investment_target": 100,
+          "inception_date": 96.7,
+          "inception_status": 100,
+          "scheduled_inception_date": 1.1,
+          "fund_structure": 100
+        }
+      ],
+      "limitations": [
+        "미설정 상품은 실제 설정일 대신 상태와 예정일을 구분해 답변"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "returns",
+      "name": "수익률 질문",
+      "status": "PARTIAL",
+      "evidence": [
+        "성과 3631행",
+        {
+          "funds_with_any_performance": 95.7,
+          "funds_with_fund_level_1y": 30.4,
+          "rows_with_as_of_date": 100,
+          "rows_with_benchmark": 91,
+          "classes_with_performance": 72.1
+        }
+      ],
+      "limitations": [
+        "성과가 없는 신규 펀드가 있으며 기간과 클래스, 기준일을 함께 지정해야 정확함"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "fees",
+      "name": "보수/수수료 질문",
+      "status": "READY",
+      "evidence": [
+        "클래스 1071건",
+        {
+          "funds_with_classes": 100,
+          "classes_with_total_fee": 98.6,
+          "classes_with_total_expense_ratio": 96.9,
+          "time_dependent_fee_rows": 56
+        }
+      ],
+      "limitations": [
+        "시점별·성과연동 보수는 class_fee_schedules 우선 사용"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "classes",
+      "name": "클래스 관련 질문",
+      "status": "READY_WITH_RAG",
+      "evidence": [
+        {
+          "classes": 1071,
+          "account_type": 100,
+          "channel": 100,
+          "front_load": 100,
+          "class_inception_date": 52.4,
+          "class_inception_status": 100,
+          "mirae_classes": 202,
+          "mirae_class_inception_status": 100,
+          "class_inception_rag_funds": 92,
+          "eligibility_in_rag_funds": 100
+        }
+      ],
+      "limitations": [
+        "정형 필드에 없는 상세 가입자격은 fees 청크 원문을 조회해야 함"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "risk_grade",
+      "name": "위험등급 질문",
+      "status": "READY",
+      "evidence": [
+        {
+          "risk_grade": 100,
+          "volatility": 51.1,
+          "risk_rag_funds": 100
+        }
+      ],
+      "limitations": [
+        "위험등급과 개별 위험요인을 구분해 답해야 함"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "aum",
+      "name": "AUM/운용규모 질문",
+      "status": "PARTIAL",
+      "evidence": [
+        "AUM 80행",
+        {
+          "funds_with_aum": 87,
+          "rows_with_as_of_date": 100,
+          "normalized_krw": 100
+        }
+      ],
+      "limitations": [
+        "12개 펀드는 AUM 정형값이 없음"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "equity",
+      "name": "주식형 특화 질문",
+      "status": "READY_WITH_RAG",
+      "evidence": [
+        "주식 관련 펀드 40건"
+      ],
+      "limitations": [
+        "세부 섹터·종목 편입비중은 현재 별도 구조화되지 않음"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "bond",
+      "name": "채권/국공채형 질문",
+      "status": "READY_WITH_RAG",
+      "evidence": [
+        "채권 관련 펀드 52건",
+        "듀레이션 구간 보유 29/52"
+      ],
+      "limitations": [
+        "신용등급·듀레이션 상세는 RAG 원문 병행"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "mixed_fof",
+      "name": "혼합형/재간접형 질문",
+      "status": "READY_WITH_RAG",
+      "evidence": [
+        "혼합·재간접 관련 펀드 2건"
+      ],
+      "limitations": [
+        "정확한 자산별 편입비중은 원문 표 조회 필요"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "tdf",
+      "name": "TDF 관련 질문",
+      "status": "NOT_READY",
+      "evidence": [
+        "TDF 명시 상품 0건",
+        "빈티지 보유 0건",
+        "라이프사이클 유사명칭 2건"
+      ],
+      "limitations": [
+        "현재 데이터셋에서 TDF로 명시된 상품이 식별되지 않으며 라이프사이클 상품을 임의로 TDF로 간주하면 안 됨"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "pair_compare",
+      "name": "상품 2개 직접 비교",
+      "status": "READY",
+      "evidence": [
+        "fund_id 기준 성과·보수·위험·AUM 조인 가능"
+      ],
+      "limitations": [
+        "동일 기간·기준일·클래스로 정규화 후 비교"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "ranking",
+      "name": "여러 상품 랭킹 질문",
+      "status": "PARTIAL",
+      "evidence": [
+        "펀드단위 1Y 행 28건",
+        "동일 기준일 2개 이상 코호트 2개"
+      ],
+      "limitations": [
+        "서로 다른 기준일과 클래스의 수익률을 그대로 순위화하면 안 됨"
+      ],
+      "implementation": [
+        "동일 as_of_date·period·대표 클래스 필터 필수"
+      ]
+    },
+    {
+      "id": "multi_filter",
+      "name": "다중 조건 검색",
+      "status": "READY",
+      "evidence": [
+        "자산유형·지역·대상·위험등급·클래스·채널·보수·AUM 필터 가능"
+      ],
+      "limitations": [
+        "상세 가입자격과 최소가입금액은 RAG 보조"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "as_of",
+      "name": "기준일 질문",
+      "status": "READY",
+      "evidence": [
+        {
+          "document_date": 100,
+          "effective_date": 100,
+          "performance_as_of_date": 100,
+          "aum_as_of_date": 100
+        }
+      ],
+      "limitations": [
+        "문서 작성일, 효력발생일, 성과 기준일, AUM 기준일을 구분"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "customer_situation",
+      "name": "고객상황 기반 질문",
+      "status": "CONDITIONAL",
+      "evidence": [
+        {
+          "classes": 1071,
+          "account_type": 100,
+          "channel": 100,
+          "front_load": 100,
+          "class_inception_date": 52.4,
+          "class_inception_status": 100,
+          "mirae_classes": 202,
+          "mirae_class_inception_status": 100,
+          "class_inception_rag_funds": 92,
+          "eligibility_in_rag_funds": 100
+        }
+      ],
+      "limitations": [
+        "연령·투자기간·손실감내도·계좌유형 정보가 없으면 추천 불가"
+      ],
+      "implementation": [
+        "적합성 판단 전 역질문 필요"
+      ]
+    },
+    {
+      "id": "insufficient_info",
+      "name": "정보 부족시 역질문",
+      "status": "AGENT_REQUIRED",
+      "evidence": [
+        "데이터 문제가 아니라 대화 정책·슬롯 수집 문제"
+      ],
+      "limitations": [],
+      "implementation": []
+    },
+    {
+      "id": "hallucination_trap",
+      "name": "함정/환각 검증 질문",
+      "status": "AGENT_REQUIRED",
+      "evidence": [
+        "원문 이슈 14건",
+        "품질 이슈 청크 14건"
+      ],
+      "limitations": [
+        "공식 확인되지 않은 오류 후보를 확정 오류라고 말하면 안 됨"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "strategy_risk_rag",
+      "name": "투자전략/위험요인 RAG 질문",
+      "status": "READY",
+      "evidence": [
+        {
+          "strategy_funds": 100,
+          "risk_funds": 100,
+          "fees_funds": 100,
+          "purchase_redemption_funds": 100,
+          "tax_funds": 98.9,
+          "source_issue_chunks": 14
+        }
+      ],
+      "limitations": [
+        "답변에 PDF 페이지 출처 표시 필요"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "ambiguous_language",
+      "name": "자연어가 애매한 질문",
+      "status": "AGENT_REQUIRED",
+      "evidence": [
+        "펀드명·클래스·기간·기준일 엔티티 해소 필요"
+      ],
+      "limitations": [],
+      "implementation": []
+    },
+    {
+      "id": "compound",
+      "name": "복합 질문",
+      "status": "AGENT_REQUIRED",
+      "evidence": [
+        "구조화 검색과 RAG를 한 답변에서 조합해야 함"
+      ],
+      "limitations": [],
+      "implementation": []
+    }
+  ],
+  "additional_question_categories": [
+    {
+      "id": "benchmark_excess_return",
+      "name": "비교지수 및 초과수익 질문",
+      "status": "READY",
+      "evidence": [
+        "비교지수 보유 펀드 86/92",
+        "비교지수 수익률 보유 성과행 3303/3631"
+      ],
+      "limitations": [
+        "같은 기간·기준일로 펀드수익률과 차감"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "risk_return",
+      "name": "위험 대비 수익 질문",
+      "status": "PARTIAL",
+      "evidence": [
+        "변동성 보유 펀드 47/92"
+      ],
+      "limitations": [
+        "샤프지수 계산에 필요한 무위험수익률은 없음"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "track_record",
+      "name": "설정일·운용기간 질문",
+      "status": "READY",
+      "evidence": [
+        "실제 설정일 보유 89/92",
+        "설정 상태 보유 92/92",
+        "설정 예정일 보유 1/92"
+      ],
+      "limitations": [
+        "NOT_ESTABLISHED는 운용기간을 계산하지 않음"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "currency_hedge",
+      "name": "환헤지 질문",
+      "status": "PARTIAL",
+      "evidence": [
+        "환헤지 정형값 보유 1/92"
+      ],
+      "limitations": [
+        "NULL은 환헤지 없음이 아니라 미확인"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "eligibility_minimum",
+      "name": "가입자격·최소가입금액 질문",
+      "status": "READY_WITH_RAG",
+      "evidence": [
+        "가입자격 관련 원문을 가진 펀드 92/92"
+      ],
+      "limitations": [
+        "금액 표기가 PDF 추출 과정에서 띄어질 수 있어 키워드+벡터 병행"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "redemption_tax",
+      "name": "환매·과세 질문",
+      "status": "READY_WITH_RAG",
+      "evidence": [
+        {
+          "strategy_funds": 100,
+          "risk_funds": 100,
+          "fees_funds": 100,
+          "purchase_redemption_funds": 100,
+          "tax_funds": 98.9,
+          "source_issue_chunks": 14
+        }
+      ],
+      "limitations": [
+        "세법 변경 가능성을 고지하고 문서 기준일 표시"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "source_quality",
+      "name": "PDF 오류·상충 질문",
+      "status": "READY",
+      "evidence": [
+        "이슈 레지스트리 14건",
+        "연결 품질 청크 14건"
+      ],
+      "limitations": [
+        "UNCONFIRMED 상태는 오류 후보라고 표현"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "latest_document",
+      "name": "최신 투자설명서 선택 질문",
+      "status": "CONDITIONAL",
+      "evidence": [
+        "문서 94건 / 펀드 92건"
+      ],
+      "limitations": [
+        "동일 펀드의 복수 문서가 있어 effective_date 기준 최신본 선택 규칙 필요"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "holdings_sector",
+      "name": "보유종목·섹터 비중 질문",
+      "status": "NOT_READY",
+      "evidence": [
+        "현재 전용 holdings 테이블 없음"
+      ],
+      "limitations": [
+        "원문에 일부 있어도 전수·동일 기준 비교는 보장하지 못함"
+      ],
+      "implementation": []
+    },
+    {
+      "id": "live_market",
+      "name": "현재가·오늘 수익률 질문",
+      "status": "NOT_READY",
+      "evidence": [
+        "정적 투자설명서 데이터셋"
+      ],
+      "limitations": [
+        "실시간 외부 데이터 연결 필요"
+      ],
+      "implementation": []
+    }
+  ],
+  "representative_tests": [
+    {
+      "id": "T01",
+      "question": "특정 펀드의 운용사, 유형, 설정일은?",
+      "pass": true,
+      "route": [
+        "funds"
+      ]
+    },
+    {
+      "id": "T02",
+      "question": "특정 클래스의 최근 1년 수익률과 기준일은?",
+      "pass": true,
+      "route": [
+        "performance",
+        "classes"
+      ]
+    },
+    {
+      "id": "T03",
+      "question": "A와 C 클래스의 총보수 차이는?",
+      "pass": true,
+      "route": [
+        "classes"
+      ]
+    },
+    {
+      "id": "T04",
+      "question": "KCGI 목표전환형의 클래스별 가입자격은?",
+      "pass": true,
+      "route": [
+        "chunks:fees"
+      ],
+      "expected_pages": [
+        "32",
+        "33"
+      ]
+    },
+    {
+      "id": "T05",
+      "question": "위험등급과 주요 위험요인은?",
+      "pass": true,
+      "route": [
+        "funds",
+        "chunks:risk"
+      ]
+    },
+    {
+      "id": "T06",
+      "question": "운용규모와 기준일은?",
+      "pass": true,
+      "route": [
+        "aum"
+      ],
+      "coverage_note": "80/92 funds"
+    },
+    {
+      "id": "T07",
+      "question": "동일 기준일 1년 수익률 상위 상품은?",
+      "pass": true,
+      "route": [
+        "performance"
+      ],
+      "guardrail": "same as_of_date + period + representative class"
+    },
+    {
+      "id": "T08",
+      "question": "투자전략과 환매 위험을 설명해줘",
+      "pass": true,
+      "route": [
+        "chunks:investment_strategy",
+        "chunks:risk"
+      ]
+    },
+    {
+      "id": "T09",
+      "question": "PDF 원문 오류가 있는 수치야?",
+      "pass": true,
+      "route": [
+        "pdf_source_issues",
+        "record_issues",
+        "chunks:source_quality_issue"
+      ]
+    },
+    {
+      "id": "T10",
+      "question": "오늘 기준 수익률은?",
+      "pass": false,
+      "route": [],
+      "expected_behavior": "정적 문서 기준 데이터임을 밝히고 실시간 데이터 필요 안내"
+    },
+    {
+      "id": "T11",
+      "question": "TDF 2050 상품을 비교해줘",
+      "pass": false,
+      "route": [
+        "funds",
+        "chunks:investment_strategy"
+      ],
+      "expected_behavior": "현재 데이터셋에는 TDF로 명시된 상품이 없다고 답하고 라이프사이클 상품과 혼동하지 않음"
+    }
+  ],
+  "test_summary": {
+    "passed": 9,
+    "expected_refusals": 2,
+    "failed": 0
+  },
+  "recommended_query_policy": {
+    "single_product": [
+      "resolve fund_id",
+      "resolve class and period when relevant",
+      "query structured tables",
+      "retrieve matching RAG section",
+      "attach source_doc_id and source_page"
+    ],
+    "comparison_or_ranking": [
+      "require same metric",
+      "require same period",
+      "require compatible class",
+      "require same as_of_date or disclose mismatch",
+      "exclude source-quality quarantined values"
+    ],
+    "customer_situation": [
+      "collect account type",
+      "collect investment horizon",
+      "collect risk tolerance",
+      "collect liquidity need",
+      "then filter; do not present as personalized financial advice"
+    ],
+    "uncertainty": [
+      "never treat NULL as zero or no",
+      "ask when fund/class/period is ambiguous",
+      "say not found when evidence is absent",
+      "label unconfirmed source issues as candidates"
+    ]
+  }
+}

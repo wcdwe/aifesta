@@ -1,0 +1,30 @@
+[
+  {
+    "file_name": "R2_KR5116501001.pdf",
+    "company_name": "브이아이자산운용",
+    "fund_id": "FUND000018",
+    "fund_name": "브이아이퇴직연금증권자투자신탁1호",
+    "class_id": "CLASS000239",
+    "class_code": "BW322",
+    "class_name": "수수료미징구-오프라인-퇴직연금(C-P)",
+    "class_inception_date": "2008-02-28",
+    "class_inception_status": "ESTABLISHED",
+    "source_page": 6,
+    "source_text": "투자실적 추이 표: 수수료미징구-오프라인-퇴직연금(C-P) 최초설정일 2008.02.28",
+    "reason": "PDF의 클래스별 최초설정일 열에 날짜가 직접 명시됨"
+  },
+  {
+    "file_name": "R2_KR5116501001.pdf",
+    "company_name": "브이아이자산운용",
+    "fund_id": "FUND000018",
+    "fund_name": "브이아이퇴직연금증권자투자신탁1호",
+    "class_id": "CLASS000240",
+    "class_code": "BW323",
+    "class_name": "수수료미징구-온라인-퇴직연금(C-Pe)",
+    "class_inception_date": null,
+    "class_inception_status": "NOT_DISCLOSED",
+    "source_page": 6,
+    "source_text": "클래스 목록에는 C-Pe가 존재하지만 최초설정일 표에는 C-P 행만 기재됨",
+    "reason": "펀드 최초설정일 2006-12-26 또는 다른 클래스 날짜를 추정하여 대입하지 않음"
+  }
+]

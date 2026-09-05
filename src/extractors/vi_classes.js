@@ -1,0 +1,3 @@
+const rows=[['C-P','BW322',.2,.3,.02,.015,.535,.542],['C-Pe','BW323',.2,.15,.02,.015,.385,.385]];
+function extractViClasses(){return rows.map((r,i)=>{const[t,code,mg,sale,trust,admin,total,ter]=r;return{class_id:`CLASS${String(239+i).padStart(6,'0')}`,fund_id:'FUND000018',class_code:code,class_name_raw:`수수료미징구-${t==='C-P'?'오프라인':'온라인'}-퇴직연금(${t})`,class_name_normalized:t,account_type:'퇴직연금',channel:t==='C-P'?'오프라인':'온라인',front_load:0,back_load:0,management_fee:mg,sales_fee:sale,trust_fee:trust,admin_fee:admin,total_fee:total,total_expense_ratio:ter,source_doc_id:'DOC000018',source_page:'9|35|36',source_text:`[p.35-36] ${t}; 코드 ${code}; 운용 ${mg}%; 판매 ${sale}%; 수탁 ${trust}%; 사무관리 ${admin}%; 총보수 ${total}%; 총보수·비용 ${ter}%`}})}
+module.exports={extractViClasses};

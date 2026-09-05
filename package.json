@@ -1,0 +1,17 @@
+{
+  "name": "pension-agent-extraction",
+  "private": true,
+  "scripts": {
+    "extract": "node src/run_extraction.js",
+    "validate:classes": "node src/run_class_validation.js",
+    "validate:final": "node src/run_final_validation.js",
+    "audit:questions": "node src/run_question_coverage_audit.js",
+    "extract:class-inception": "node src/extract_mirae_class_inception.js && node src/extract_kyobo_class_inception.js && node src/extract_daol_class_inception.js && node src/extract_ds_class_inception.js && node src/extract_midas_class_inception.js && node src/extract_barings_class_inception.js && node src/extract_vi_class_inception.js && node src/extract_samsung_class_inception.js && node src/extract_sparx_class_inception.js && node src/extract_shinyoung_class_inception.js && node src/extract_shinhan_class_inception.js && node src/extract_assetplus_class_inception.js && node src/extract_woori_class_inception.js && node src/extract_eugene_class_inception.js && node src/extract_koreit_class_inception.js && node src/extract_kiwoom_class_inception.js && node src/extract_truston_class_inception.js && node src/extract_hana_class_inception.js && node src/extract_kivalue_class_inception.js && node src/extract_hankook_class_inception.js && node src/extract_hanwha_class_inception.js && node src/extract_heungkuk_class_inception.js && node src/extract_db_class_inception.js && node src/extract_kb_class_inception.js && node src/extract_kcgi_class_inception.js && node src/extract_nh_amundi_class_inception.js && node src/extract_vip_class_inception.js",
+    "audit:midas-tables": "node src/run_table_audit.js",
+    "extract:chunks": "node src/run_chunks.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.8",
+    "pdfjs-dist": "6.3.289"
+  }
+}

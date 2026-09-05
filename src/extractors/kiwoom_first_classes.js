@@ -1,0 +1,2 @@
+function extractKiwoomFirstClasses(){return[{class_id:'CLASS000951',fund_id:'FUND000080',class_code:'31638',class_name_raw:'투자신탁',class_name_normalized:'투자신탁',account_type:'연금저축',channel:'오프라인',front_load:0,back_load:0,management_fee:.09,sales_fee:.2,trust_fee:.02,admin_fee:0,total_fee:.31,total_expense_ratio:.3174,source_doc_id:'DOC000082',source_page:'3|23',source_text:'[p.3,23] 단일 투자신탁; 총보수 0.3100%; 기타비용 0.0074%; 총보수·비용 0.3174%'}];}
+module.exports={extractKiwoomFirstClasses};

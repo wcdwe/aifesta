@@ -1,0 +1,44 @@
+[
+  {
+    "file_name": "R2_KR516702010M.pdf",
+    "company_name": "에셋플러스자산운용",
+    "fund_id": "FUND000017",
+    "fund_name": "에셋플러스코리아리치투게더연금증권자투자신탁1호",
+    "class_id": "CLASS000236",
+    "class_code": "AH939",
+    "class_name": "수수료미징구-오프라인(C)-개인연금",
+    "class_inception_date": null,
+    "class_inception_status": "NOT_DISCLOSED",
+    "source_page": "8|9|30",
+    "source_text": "클래스 목록과 클래스별 성과행은 있으나 최초설정일 열은 없고, 2013-05-21은 표 전체에 적용된 펀드 설정일 이후 성과기간임",
+    "reason": "펀드 설정일 이후 성과기간을 클래스별 최초설정일로 추정하여 대입하지 않음"
+  },
+  {
+    "file_name": "R2_KR516702010M.pdf",
+    "company_name": "에셋플러스자산운용",
+    "fund_id": "FUND000017",
+    "fund_name": "에셋플러스코리아리치투게더연금증권자투자신탁1호",
+    "class_id": "CLASS000237",
+    "class_code": "AH940",
+    "class_name": "수수료미징구-온라인(Ce)-개인연금",
+    "class_inception_date": null,
+    "class_inception_status": "NOT_DISCLOSED",
+    "source_page": "8|9|30",
+    "source_text": "클래스 목록과 클래스별 성과행은 있으나 최초설정일 열은 없고, 2013-05-21은 표 전체에 적용된 펀드 설정일 이후 성과기간임",
+    "reason": "펀드 설정일 이후 성과기간을 클래스별 최초설정일로 추정하여 대입하지 않음"
+  },
+  {
+    "file_name": "R2_KR516702010M.pdf",
+    "company_name": "에셋플러스자산운용",
+    "fund_id": "FUND000017",
+    "fund_name": "에셋플러스코리아리치투게더연금증권자투자신탁1호",
+    "class_id": "CLASS000238",
+    "class_code": "AQ211",
+    "class_name": "수수료미징구-온라인슈퍼(S-P)-개인연금",
+    "class_inception_date": null,
+    "class_inception_status": "NOT_DISCLOSED",
+    "source_page": "8|9|30",
+    "source_text": "클래스 목록과 클래스별 성과행은 있으나 최초설정일 열은 없고, 2013-05-21은 표 전체에 적용된 펀드 설정일 이후 성과기간임",
+    "reason": "펀드 설정일 이후 성과기간을 클래스별 최초설정일로 추정하여 대입하지 않음"
+  }
+]
