@@ -6828,7 +6828,13 @@
     "distribution_fee": "0.3000",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "1.1565",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "119",
+      "2y": "243",
+      "3y": "374",
+      "5y": "655",
+      "10y": "1491"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -8836,7 +8842,13 @@
     "distribution_fee": "0.1470",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.3280",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "35",
+      "2y": "70",
+      "3y": "107",
+      "5y": "186",
+      "10y": "418"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -15973,7 +15985,13 @@
     "distribution_fee": "0.00",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.13",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "13",
+      "2y": "26",
+      "3y": "40",
+      "5y": "71",
+      "10y": "160"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -25138,7 +25156,13 @@
     "distribution_fee": "0.010",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2623",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "27",
+      "2y": "55",
+      "3y": "84",
+      "5y": "148",
+      "10y": "333"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64299,7 +64323,11 @@
     "distribution_fee": "0.06",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.403",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "111",
+      "2y": "154",
+      "3y": "199"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64367,7 +64395,11 @@
     "distribution_fee": "0.04",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.383",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "39",
+      "2y": "80",
+      "3y": "123"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64435,7 +64467,11 @@
     "distribution_fee": "0.50",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.843",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "86",
+      "2y": "176",
+      "3y": "270"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64496,7 +64532,11 @@
     "distribution_fee": "0.00",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.343",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "35",
+      "2y": "72",
+      "3y": "110"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64557,7 +64597,11 @@
     "distribution_fee": "0.40",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.743",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "76",
+      "2y": "156",
+      "3y": "238"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64618,7 +64662,11 @@
     "distribution_fee": "0.20",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.543",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "56",
+      "2y": "114",
+      "3y": "175"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64679,7 +64727,11 @@
     "distribution_fee": "0.30",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.643",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "66",
+      "2y": "135",
+      "3y": "206"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64740,7 +64792,11 @@
     "distribution_fee": "0.15",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.493",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "51",
+      "2y": "103",
+      "3y": "159"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -65373,7 +65429,13 @@
     "distribution_fee": "0.29",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "1.15",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "131",
+      "2y": "273",
+      "3y": "425",
+      "5y": "769",
+      "10y": "1898"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -65636,7 +65698,13 @@
     "distribution_fee": "0.40",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "1.26",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "131",
+      "2y": "273",
+      "3y": "425",
+      "5y": "769",
+      "10y": "1898"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -65831,7 +65899,13 @@
     "distribution_fee": "0.35",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "1.21",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "126",
+      "2y": "262",
+      "3y": "408",
+      "5y": "738",
+      "10y": "1823"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -82953,7 +83027,13 @@
     "distribution_fee": "0.000",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.1197",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "12",
+      "2y": "26",
+      "3y": "39",
+      "5y": "69",
+      "10y": "157"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
