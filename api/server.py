@@ -50,7 +50,10 @@ import tax_calculator  # noqa: E402
 import product_ranking  # noqa: E402
 import institution_facts  # noqa: E402
 from agent_v2.pre_router import pre_route  # noqa: E402
-from agent_v2.document_path import try_simple_product_document  # noqa: E402
+from agent_v2.document_path import (  # noqa: E402
+    try_simple_institution_document,
+    try_simple_product_document,
+)
 from agent_v2.structured_path import try_fast_structured  # noqa: E402
 from agent_v2.templates import build_policy_payload  # noqa: E402
 
@@ -494,6 +497,13 @@ def answer_payload(question_id: str, question: str) -> dict:
             "answer": answer,
             "route": "tax_calculation",
         }
+
+    # 단순 제도·절차 질문은 질의 분석 LLM 전에 처리한다. 원자적 사실 DB에
+    # 있으면 0회 LLM, 없으면 institution 문서 RAG와 답변 생성 1회 경로다.
+    if pre_decision.route == "SIMPLE_DOCUMENT":
+        institution_body = try_simple_institution_document(question_id, question)
+        if institution_body is not None:
+            return institution_body
 
     # 상품을 이름으로도 찾는다. 예전엔 질의에 상품코드(KR...)가 문자
     # 그대로 있을 때만 인식해서, "미래에셋장기성장포커스 총보수 얼마야?"

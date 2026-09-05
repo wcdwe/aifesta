@@ -1,7 +1,11 @@
 import unittest
 
 from agent_v2.pre_router import assess_risk, pre_route
-from agent_v2.document_path import _usable, try_simple_product_document
+from agent_v2.document_path import (
+    _usable,
+    try_simple_institution_document,
+    try_simple_product_document,
+)
 from agent_v2.product_resolver import resolve_product
 from agent_v2.schemas import ValidationResult
 from agent_v2.structured_path import try_fast_structured
@@ -108,8 +112,41 @@ class SimpleDocumentTests(unittest.TestCase):
         self.assertIn("p.", result["answer"])
         self.assertIn("상품 문서 Hybrid RAG", result["think_trace"])
 
-    def test_institution_question_is_left_for_existing_path(self):
-        self.assertIsNone(try_simple_product_document("Q", "IRP가 무엇인지 설명해줘"))
+    def test_atomic_institution_fact_skips_llm(self):
+        result = try_simple_institution_document("Q", "IRP의 세액공제 한도는 얼마인가요?")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route"], "institution_facts")
+        self.assertIn("LLM 호출 없음", result["think_trace"])
+
+    def test_procedure_uses_institution_rag_with_citation(self):
+        result = try_simple_institution_document("Q", "퇴직연금 장외채권 매수 신청 어떻게 해?")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route"], "rag")
+        self.assertIn("p.", result["answer"])
+        self.assertIn("표지·목차 제외", result["think_trace"])
+
+    def test_buy_cancel_prefers_exact_procedure(self):
+        result = try_simple_institution_document("Q", "매수취소 어떻게해?")
+        self.assertIsNotNone(result)
+        self.assertIn("doc7", result["answer"])
+        self.assertIn("연금계좌현황", result["answer"])
+
+    def test_deposit_maturity_is_document_question(self):
+        self.assertEqual(
+            pre_route("예금 만기상환 자금은 자동 재예치 되는 거 아니었나요?").route,
+            "SIMPLE_DOCUMENT",
+        )
+
+    def test_faq_index_is_skipped_for_deposit_maturity(self):
+        result = try_simple_institution_document(
+            "Q", "예금 만기상환 자금은 자동 재예치 되는 거 아니었나요?"
+        )
+        self.assertIsNotNone(result)
+        self.assertIn("doc30 p.9", result["answer"])
+        self.assertIn("2023년 7월 12일", result["answer"])
+
+    def test_unrelated_question_is_not_intercepted(self):
+        self.assertIsNone(try_simple_institution_document("Q", "오늘 날씨가 어때?"))
 
 
 if __name__ == "__main__":
