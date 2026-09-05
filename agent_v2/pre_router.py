@@ -18,7 +18,7 @@ _LOW_RISK_HIGH_RETURN = re.compile(
 )
 _PROFILE = re.compile(r"\d{2,3}\s*세|IRP|DC|DB|연금저축|\d+\s*년|장기|단기|손실.*감수|중위험|고위험|저위험")
 _DOCUMENT = re.compile(r"절차|방법|어떻게|뜻|의미|왜|위험요인|투자전략|원금보장|세제|세액공제")
-_COMPLEX = re.compile(r"비교|각각|동시에|이면서|그리고|까지|모두")
+_COMPLEX = re.compile(r"비교|차이|각각|동시에|이면서|그리고|까지|모두")
 
 
 def pre_route(question: str) -> PreRouteDecision:
@@ -49,7 +49,7 @@ def pre_route(question: str) -> PreRouteDecision:
 
     products = find_products(text)
     intents = detect_intents(text)
-    if products and intents and not _COMPLEX.search(text):
+    if len(products) == 1 and intents and not _COMPLEX.search(text):
         return PreRouteDecision(
             route="FAST_STRUCTURED",
             reasons=["단일 상품과 정형 조회 항목을 규칙으로 확정 가능"],

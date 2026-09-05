@@ -3,6 +3,7 @@ import unittest
 from agent_v2.pre_router import assess_risk, pre_route
 from agent_v2.product_resolver import resolve_product
 from agent_v2.schemas import ValidationResult
+from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
 
 
@@ -53,6 +54,10 @@ class PreRouterTests(unittest.TestCase):
         decision = pre_route("미래에셋장기성장포커스 위험등급 알려줘")
         self.assertEqual(decision.route, "FAST_STRUCTURED")
 
+    def test_two_product_difference_is_not_fast_structured(self):
+        decision = pre_route("하나파워e단기채와 한국투자 크레딧포커스 ESG 수익률 차이가 어때?")
+        self.assertEqual(decision.route, "AGENT")
+
     def test_high_risk_llm_answer_requires_llm_validation(self):
         risk = assess_risk(["추천"], ["loss_intolerance"], "LLM")
         self.assertTrue(risk.requires_llm_validation)
@@ -70,6 +75,24 @@ class ValidationSchemaTests(unittest.TestCase):
     def test_fail_requires_error(self):
         with self.assertRaises(ValueError):
             ValidationResult(status="FAIL", retry_action="REGENERATE", errors=[])
+
+
+class FastStructuredTests(unittest.TestCase):
+    def test_risk_question_uses_db_without_llm(self):
+        result = try_fast_structured("Q", "미래에셋장기성장포커스 위험등급 알려줘")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route"], "single_product")
+        self.assertIn("LLM 호출 없음", result["think_trace"])
+        self.assertIn("위험등급", result["answer"])
+
+    def test_class_fee_question_keeps_class_scope(self):
+        result = try_fast_structured("Q", "미래에셋장기성장포커스 A-e 클래스 총보수 얼마야?")
+        self.assertIsNotNone(result)
+        self.assertIn("A-e", result["answer"])
+
+    def test_ambiguous_family_is_not_arbitrarily_selected(self):
+        result = try_fast_structured("Q", "솔로몬 국공채 펀드 총보수 알려줘")
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":
