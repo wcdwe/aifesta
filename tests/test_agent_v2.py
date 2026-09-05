@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from agent_v2.pre_router import assess_risk, pre_route
 from agent_v2.document_path import (
@@ -7,6 +8,7 @@ from agent_v2.document_path import (
     try_simple_product_document,
 )
 from agent_v2.product_resolver import resolve_product
+from agent_v2.query_analyzer import parse_plan
 from agent_v2.schemas import ValidationResult
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
@@ -82,6 +84,54 @@ class ValidationSchemaTests(unittest.TestCase):
             ValidationResult(status="FAIL", retry_action="REGENERATE", errors=[])
 
 
+class QueryAnalyzerTests(unittest.TestCase):
+    def test_valid_plan_is_parsed(self):
+        raw = """```json
+        {"intents":["조건검색"],"entities":{"account_type":"IRP"},
+        "product_mentions":[],"required_facts":["자산유형","5년 수익률"],
+        "filters":[{"field":"account_type","operator":"eq","value":"IRP","source_text":"IRP에서 투자 가능"}],
+        "metrics":["return_5y"],"periods":["5년"],"sort":[],"limit":null,
+        "return_all":true,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["FILTER"],"completeness":"all_matches",
+        "plan":[{"step":1,"tool":"FILTER","purpose":"조건 상품 전체 조회","depends_on":[]}]}
+        ```"""
+        outcome = parse_plan(raw, "IRP에서 투자 가능하고 채권형이며 5년 수익률이 있는 상품")
+        self.assertIsNotNone(outcome.plan)
+        self.assertTrue(outcome.plan.return_all)
+
+    def test_invented_product_mention_is_rejected(self):
+        raw = """{"intents":["상품설명"],"entities":{},
+        "product_mentions":[{"text":"없는펀드","role":"single","resolution_required":true}],
+        "required_facts":[],"filters":[],"metrics":[],"periods":[],"sort":[],
+        "limit":null,"return_all":false,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["RESOLVE"],"completeness":"single_answer",
+        "plan":[{"step":1,"tool":"RESOLVE","purpose":"식별","depends_on":[]}]}"""
+        outcome = parse_plan(raw, "IRP가 뭐야?")
+        self.assertIsNone(outcome.plan)
+
+    def test_forward_dependency_is_rejected(self):
+        raw = """{"intents":[],"entities":{},"product_mentions":[],"required_facts":[],
+        "filters":[],"metrics":[],"periods":[],"sort":[],"limit":null,"return_all":false,
+        "missing":{"for_personalization":[],"from_evidence":[]},"gap_types":[],
+        "answerable_now":true,"follow_ups":[],"safety_flags":[],"tools":["FACT","RAG"],
+        "completeness":"single_answer","plan":[
+        {"step":1,"tool":"FACT","purpose":"조회","depends_on":[2]},
+        {"step":2,"tool":"RAG","purpose":"검색","depends_on":[]}]}"""
+        outcome = parse_plan(raw, "질문")
+        self.assertIsNone(outcome.plan)
+
+    def test_empty_tools_with_plan_is_rejected(self):
+        raw = """{"intents":["비교"],"entities":{},"product_mentions":[],
+        "required_facts":[],"filters":[],"metrics":[],"periods":[],"sort":[],
+        "limit":null,"return_all":false,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":[],"completeness":"single_answer",
+        "plan":[{"step":1,"tool":"COMPARE","purpose":"비교","depends_on":[]}]}"""
+        self.assertIsNone(parse_plan(raw, "두 상품 비교").plan)
+
+
 class FastStructuredTests(unittest.TestCase):
     def test_risk_question_uses_db_without_llm(self):
         result = try_fast_structured("Q", "미래에셋장기성장포커스 위험등급 알려줘")
@@ -101,6 +151,17 @@ class FastStructuredTests(unittest.TestCase):
 
 
 class SimpleDocumentTests(unittest.TestCase):
+    def setUp(self):
+        # 로컬 .env에 실제 키가 있어도 단위 테스트가 유료 호출을 하지 않는다.
+        self.generate_patcher = patch(
+            "agent_v2.document_path.generate",
+            return_value=(None, "테스트에서 LLM 호출 생략"),
+        )
+        self.generate_patcher.start()
+
+    def tearDown(self):
+        self.generate_patcher.stop()
+
     def test_cover_and_toc_are_rejected(self):
         self.assertFalse(_usable({"doc_id": "d", "page": 1, "text": "(표지) 투자설명서"}))
         self.assertFalse(_usable({"doc_id": "d", "page": 2, "text": "1. 투자전략"}))
