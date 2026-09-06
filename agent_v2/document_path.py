@@ -167,11 +167,80 @@ def _context(hits: list[dict]) -> str:
     )
 
 
-def _fallback(hit: dict) -> str:
-    return f"검색된 근거({hit['doc_id']} p.{hit['page']})에 따르면:\n{hit['text'][:350]}"
+# 질문이 특정 화제를 물으면, 그 화제의 "답변다운" 값 신호를 담은 문장
+# 구간에 작은 가산점을 준다. 특정 정답 문장을 하드코딩한 게 아니라 화제
+# 단위 신호다 - 세제 질문이면 세율·공제 같은 값 모양 낱말이 나오는
+# 구간이 정답일 가능성이 높다는 일반 규칙이라, 다른 세제 질문에도 같이
+# 적용된다. 필요하면 이 딕셔너리에 화제를 더 추가하면 된다.
+_TOPIC_SIGNALS = {
+    "tax": (
+        re.compile(r"세금|과세|세액|소득세"),
+        re.compile(r"과세|비과세|세율|소득세|세액공제|공제|%"),
+    ),
+}
 
 
-def _procedure_fallback(hits: list[dict]) -> str:
+def _topic_bonus(question: str, window: str) -> float:
+    for question_pattern, answer_pattern in _TOPIC_SIGNALS.values():
+        if question_pattern.search(question or "") and answer_pattern.search(window):
+            return 3.0
+    return 0.0
+
+
+def _split_sentences(text: str) -> list[str]:
+    sentences = []
+    for line in (text or "").split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        sentences.extend(p.strip() for p in re.split(r"(?<=[.!?])\s+", line) if p.strip())
+    return sentences
+
+
+def _sentence_windows(text: str, size: int = 3) -> list[str]:
+    """문장 size개씩 겹치며 이어 붙인 구간들. 문장이 size개 이하면 통째로
+    구간 하나."""
+    sentences = _split_sentences(text)
+    if not sentences:
+        return [text or ""]
+    if len(sentences) <= size:
+        return [" ".join(sentences)]
+    return [" ".join(sentences[i:i + size]) for i in range(len(sentences))]
+
+
+def _relevant_excerpt(question: str, text: str, max_chars: int) -> str:
+    """청크에서 질문과 가장 관련 있는 문장 구간을 찾아 그 구간만 자른다.
+
+    예전엔 청크 앞부분 max_chars를 그대로 잘랐는데("투자자 유의사항" 같은
+    보일러플레이트가 앞에 있으면 그 청크가 실제로 담고 있는 정답 문장
+    (예: "...중도해지...기타소득세(16.5%)")까지 못 가고 잘려 나갔다 -
+    실측(INST-05). max_chars를 늘리는 건 근본 해결이 아니다(문서가 더
+    길면 같은 문제가 반복된다) - 문장 단위로 나눠 질문과 가장 관련 있는
+    구간을 고른다."""
+    text = text or ""
+    if len(text) <= max_chars:
+        return text
+    windows = _sentence_windows(text, size=3)
+    scored = [
+        (_coverage({"text": w}, question) + _topic_bonus(question, w), i, w)
+        for i, w in enumerate(windows)
+    ]
+    best_score, _, best = max(scored, key=lambda item: (item[0], -item[1]))
+    if best_score <= 0:
+        # 관련 신호를 하나도 못 찾았으면(코퍼스 전반에 걸친 일반 질문 등)
+        # 예전 동작(앞부분 절단)으로 안전하게 되돌아간다.
+        return text[:max_chars] + ("…" if len(text) > max_chars else "")
+    if len(best) > max_chars:
+        return best[:max_chars] + "…"
+    return best
+
+
+def _fallback(hit: dict, question: str = "") -> str:
+    excerpt = _relevant_excerpt(question, hit["text"], 350)
+    return f"검색된 근거({hit['doc_id']} p.{hit['page']})에 따르면:\n{excerpt}"
+
+
+def _procedure_fallback(hits: list[dict], question: str = "") -> str:
     top = hits[0]
     adjacent = [
         hit for hit in hits
@@ -179,9 +248,10 @@ def _procedure_fallback(hits: list[dict]) -> str:
     ][:2]
     adjacent.sort(key=lambda hit: hit["page"])
     if len(adjacent) == 1:
-        return _fallback(top)
+        return _fallback(top, question)
     return "\n\n".join(
-        f"검색된 근거({hit['doc_id']} p.{hit['page']}):\n{hit['text'][:450]}"
+        f"검색된 근거({hit['doc_id']} p.{hit['page']}):\n"
+        f"{_relevant_excerpt(question, hit['text'], 450)}"
         for hit in adjacent
     )
 
@@ -239,7 +309,7 @@ def try_simple_product_document(question_id: str, question: str) -> dict | None:
                 hits = used
                 context = _context(hits)
     if not answer:
-        answer = _fallback(hits[0])
+        answer = _fallback(hits[0], question)
         how = how + "; Python 검증 후 근거 발췌 사용"
 
     return {
@@ -298,7 +368,7 @@ def try_simple_institution_document(question_id: str, question: str) -> dict | N
             fallback_reason = problems
             answer = None
     if not answer:
-        answer = _procedure_fallback(hits)
+        answer = _procedure_fallback(hits, question)
         how = how + "; Python 검증 후 근거 발췌 사용"
 
     return {
