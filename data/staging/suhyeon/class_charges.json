@@ -2700,6 +2700,16 @@
     "page": 43
   },
   {
+    "product_code": "KR5118420036",
+    "class_code": "S-P(퇴직)",
+    "eligibility": null,
+    "front_load_fee": "없음",
+    "back_load_fee": "없음",
+    "redemption_fee": "없음",
+    "switch_fee": null,
+    "page": 39
+  },
+  {
     "product_code": "KR5118420062",
     "class_code": "A",
     "eligibility": null,
@@ -11568,16 +11578,6 @@
     "redemption_fee": "30일 미만: 이익 금의 70%, 30일 이상 90일 미만: 이익금의 30%",
     "switch_fee": "없음",
     "page": 35
-  },
-  {
-    "product_code": "KR5194450018",
-    "class_code": "I",
-    "eligibility": null,
-    "front_load_fee": null,
-    "back_load_fee": null,
-    "redemption_fee": "30일 미만 : 이익금의 70% 30일 이상 90일 미만 : 이익금의 30%",
-    "switch_fee": null,
-    "page": null
   },
   {
     "product_code": "KR5194450018",

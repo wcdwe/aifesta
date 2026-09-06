@@ -6859,9 +6859,12 @@
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      43
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 43
+    },
     "evidence": "[상세표 보강] [(2, '0.7446'), (3, '0.3000'), (4, '0.0400'), (5, '0.0180'), (6, '1.1026'), (7, '0.0019'), (8, '1.1545'), (10, '1.1565'), (11, '0.5943')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -6910,27 +6913,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.7446"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0400"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0180"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0000"
       },
       {
-        "label": null,
-        "value": "1.0026"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.3532"
       }
     ],
@@ -16126,11 +16125,11 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.12"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.02"
       }
     ],
@@ -16220,11 +16219,11 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.12"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.02"
       }
     ],
@@ -16302,11 +16301,11 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.12"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.02"
       }
     ],
@@ -17004,7 +17003,7 @@
         "value": "0.2"
       },
       {
-        "label": "management_fee",
+        "label": "trustee_fee",
         "value": "0.02"
       },
       {
@@ -17012,15 +17011,11 @@
         "value": "0.015"
       },
       {
-        "label": "비용",
+        "label": "other_expense",
         "value": "0.0070"
       },
       {
-        "label": "및비용비율",
-        "value": "0.5420"
-      },
-      {
-        "label": "비용",
+        "label": "transaction_cost",
         "value": "0.0016"
       }
     ],
@@ -17097,7 +17092,7 @@
         "value": "0.2"
       },
       {
-        "label": "management_fee",
+        "label": "trustee_fee",
         "value": "0.02"
       },
       {
@@ -17105,15 +17100,11 @@
         "value": "0.015"
       },
       {
-        "label": "비용",
+        "label": "other_expense",
         "value": "0.0000"
       },
       {
-        "label": "및비용비율",
-        "value": "0.3850"
-      },
-      {
-        "label": "비용",
+        "label": "transaction_cost",
         "value": "0.0000"
       }
     ],
@@ -18790,7 +18781,13 @@
     "distribution_fee": "0.1000",
     "peer_avg_fee": "0.3400",
     "total_fee_and_cost": "0.2941",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "71",
+      "2y": "103",
+      "3y": "137",
+      "5y": "209",
+      "10y": "421"
+    },
     "fee_breakdown": [
       {
         "label": "other_expense",
@@ -18803,9 +18800,12 @@
     ],
     "page": 38,
     "source_pages": [
-      38
+      38,
+      40
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 40
+    },
     "evidence": "[뒤집힌 상세표 보강] 열8",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -18973,7 +18973,13 @@
     "distribution_fee": "0.0200",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2143",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "23",
+      "2y": "46",
+      "3y": "71",
+      "5y": "125",
+      "10y": "283"
+    },
     "fee_breakdown": [
       {
         "label": "other_expense",
@@ -18986,9 +18992,12 @@
     ],
     "page": 38,
     "source_pages": [
-      38
+      38,
+      40
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 40
+    },
     "evidence": "[뒤집힌 상세표 보강] 열16",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -19028,7 +19037,13 @@
     "distribution_fee": "0.0000",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.1943",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "21",
+      "2y": "42",
+      "3y": "65",
+      "5y": "114",
+      "10y": "257"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -19053,9 +19068,12 @@
     ],
     "page": 38,
     "source_pages": [
-      38
+      38,
+      40
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 40
+    },
     "evidence": "[뒤집힌 상세표 보강] 열1",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -19159,7 +19177,13 @@
     "distribution_fee": "0.1000",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.2939",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "31",
+      "2y": "63",
+      "3y": "97",
+      "5y": "169",
+      "10y": "382"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -19184,9 +19208,12 @@
     ],
     "page": 38,
     "source_pages": [
-      38
+      38,
+      40
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 40
+    },
     "evidence": "[뒤집힌 상세표 보강] 열7",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -19430,7 +19457,13 @@
     "distribution_fee": "0.0737",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.2671",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "28",
+      "2y": "58",
+      "3y": "88",
+      "5y": "154",
+      "10y": "349"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -19656,27 +19689,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.4095"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0030"
       }
     ],
@@ -19760,27 +19789,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.3095"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0028"
       }
     ],
@@ -19864,27 +19889,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1595"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0030"
       }
     ],
@@ -19968,27 +19989,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.2595"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0031"
       }
     ],
@@ -20066,27 +20083,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.3095"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0030"
       }
     ],
@@ -20114,27 +20127,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1195"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0028"
       }
     ],
@@ -20194,27 +20203,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1395"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0028"
       }
     ],
@@ -20274,27 +20279,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1095"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0023"
       }
     ],
@@ -20345,30 +20346,32 @@
     "distribution_fee": "0.0400",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.1495",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "15",
+      "2y": "31",
+      "3y": "48",
+      "5y": "84",
+      "10y": "191"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1495"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0031"
       }
     ],
@@ -20425,27 +20428,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.2095"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0031"
       }
     ],
@@ -20505,20 +20504,16 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
-      },
-      {
-        "label": null,
-        "value": "0.1400"
       }
     ],
     "page": 32,
@@ -20568,30 +20563,32 @@
     "distribution_fee": "0.0500",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.1595",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "16",
+      "2y": "33",
+      "3y": "51",
+      "5y": "90",
+      "10y": "204"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1595"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0031"
       }
     ],
@@ -20648,27 +20645,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.2495"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0032"
       }
     ],
@@ -20728,27 +20721,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1795"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0031"
       }
     ],
@@ -20808,27 +20797,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.0750"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.0150"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.0100"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0095"
       },
       {
-        "label": null,
-        "value": "0.1645"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0033"
       }
     ],
@@ -21510,7 +21495,13 @@
     "distribution_fee": "0.0100",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.1823",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "19",
+      "2y": "40",
+      "3y": "61",
+      "5y": "106",
+      "10y": "241"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -21535,9 +21526,12 @@
     ],
     "page": 40,
     "source_pages": [
-      40
+      40,
+      42
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 42
+    },
     "evidence": "[뒤집힌 상세표 보강] 열5",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -21863,7 +21857,13 @@
     "distribution_fee": "0.0300",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.2000",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "21",
+      "2y": "43",
+      "3y": "66",
+      "5y": "116",
+      "10y": "263"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -21888,9 +21888,12 @@
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      43
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 43
+    },
     "evidence": "[뒤집힌 상세표 보강] 열5",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -21994,7 +21997,13 @@
     "distribution_fee": "0.0200",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.1900",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "20",
+      "2y": "41",
+      "3y": "63",
+      "5y": "111",
+      "10y": "250"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -22019,9 +22028,12 @@
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      43
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 43
+    },
     "evidence": "[뒤집힌 상세표 보강] 열7",
     "method": "transposed_detail_table_cross_validated",
     "confidence": 0.7,
@@ -22520,7 +22532,13 @@
     "distribution_fee": "0.0000",
     "peer_avg_fee": "0.3400",
     "total_fee_and_cost": "0.1095",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "26",
+      "2y": "38",
+      "3y": "50",
+      "5y": "77",
+      "10y": "155"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -22863,7 +22881,13 @@
     "distribution_fee": "0.0000",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.1094",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "11",
+      "2y": "23",
+      "3y": "35",
+      "5y": "62",
+      "10y": "140"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -23040,7 +23064,13 @@
     "distribution_fee": "0.0900",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.1994",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "20",
+      "2y": "42",
+      "3y": "64",
+      "5y": "112",
+      "10y": "254"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -23159,7 +23189,13 @@
     "distribution_fee": "0.0600",
     "peer_avg_fee": null,
     "total_fee_and_cost": "0.1692",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "17",
+      "2y": "35",
+      "3y": "55",
+      "5y": "95",
+      "10y": "216"
+    },
     "fee_breakdown": [
       {
         "label": "trustee_fee",
@@ -27357,27 +27393,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0021"
       },
       {
-        "label": null,
-        "value": "0.3471"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0195"
       }
     ],
@@ -27467,27 +27499,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0024"
       },
       {
-        "label": null,
-        "value": "0.4274"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0194"
       }
     ],
@@ -27577,27 +27605,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0015"
       },
       {
-        "label": null,
-        "value": "0.2365"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0191"
       }
     ],
@@ -27687,27 +27711,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0024"
       },
       {
-        "label": null,
-        "value": "0.2774"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0192"
       }
     ],
@@ -27735,27 +27755,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0024"
       },
       {
-        "label": null,
-        "value": "0.1574"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.016"
       }
     ],
@@ -27817,20 +27833,16 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
-      },
-      {
-        "label": null,
-        "value": "0.125"
       }
     ],
     "page": 41,
@@ -27880,38 +27892,43 @@
     "distribution_fee": "0.165",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2998",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "30",
+      "2y": "61",
+      "3y": "94",
+      "5y": "164",
+      "10y": "374"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.00"
       },
       {
-        "label": null,
-        "value": "0.29"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0174"
       }
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      43
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 43
+    },
     "evidence": "[상세표 보강] [(1, '0.10'), (2, '0.165'), (3, '0.015'), (4, '0.010'), (5, '0.290'), (7, '0.00'), (8, '0.29'), (9, '0.2998'), (10, '0.0174')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -27951,38 +27968,43 @@
     "distribution_fee": "0.083",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2197",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "21",
+      "2y": "44",
+      "3y": "67",
+      "5y": "118",
+      "10y": "268"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0021"
       },
       {
-        "label": null,
-        "value": "0.2101"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0163"
       }
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      43
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 43
+    },
     "evidence": "[상세표 보강] [(1, '0.10'), (2, '0.083'), (3, '0.015'), (4, '0.010'), (5, '0.208'), (7, '0.0021'), (8, '0.2101'), (9, '0.2197'), (10, '0.0163')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -28022,30 +28044,32 @@
     "distribution_fee": "0.150",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2871",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "28",
+      "2y": "58",
+      "3y": "89",
+      "5y": "156",
+      "10y": "355"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0023"
       },
       {
-        "label": null,
-        "value": "0.2773"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0194"
       }
     ],
@@ -28093,38 +28117,43 @@
     "distribution_fee": "0.075",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2113",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "20",
+      "2y": "42",
+      "3y": "65",
+      "5y": "113",
+      "10y": "258"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0016"
       },
       {
-        "label": null,
-        "value": "0.2016"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0177"
       }
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      43
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 43
+    },
     "evidence": "[상세표 보강] [(1, '0.10'), (2, '0.075'), (3, '0.015'), (4, '0.010'), (5, '0.200'), (7, '0.0016'), (8, '0.2016'), (9, '0.2113'), (10, '0.0177')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -28173,20 +28202,16 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
-      },
-      {
-        "label": null,
-        "value": "0.264"
       }
     ],
     "page": 41,
@@ -28247,20 +28272,16 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
-      },
-      {
-        "label": null,
-        "value": "0.314"
       }
     ],
     "page": 41,
@@ -28321,27 +28342,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0022"
       },
       {
-        "label": null,
-        "value": "0.2272"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0155"
       }
     ],
@@ -28403,27 +28420,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0023"
       },
       {
-        "label": null,
-        "value": "0.2073"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0152"
       }
     ],
@@ -28474,38 +28487,43 @@
     "distribution_fee": "0.070",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2066",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "20",
+      "2y": "41",
+      "3y": "63",
+      "5y": "110",
+      "10y": "251"
+    },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.0021"
       },
       {
-        "label": null,
-        "value": "0.1971"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0156"
       }
     ],
     "page": 41,
     "source_pages": [
-      41
+      41,
+      44
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 44
+    },
     "evidence": "[상세표 보강] [(1, '0.10'), (2, '0.070'), (3, '0.015'), (4, '0.010'), (5, '0.195'), (7, '0.0021'), (8, '0.1971'), (9, '0.2066'), (10, '0.0156')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -28554,20 +28572,16 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.10"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
-      },
-      {
-        "label": null,
-        "value": "0.185"
       }
     ],
     "page": 41,
@@ -29017,7 +29031,13 @@
     "distribution_fee": "1.01",
     "peer_avg_fee": "1.59",
     "total_fee_and_cost": "1.1942",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "134",
+      "2y": "274",
+      "3y": "421",
+      "5y": "738",
+      "10y": "1681"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -29043,10 +29063,12 @@
     "page": 45,
     "source_pages": [
       45,
-      42
+      42,
+      48
     ],
     "field_source_pages": {
-      "sales_commission_desc": 42
+      "sales_commission_desc": 42,
+      "cost_projection_per_10m": 48
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '1.01'), (3, '0.01'), (4, '0.005'), (5, '1.175'), (6, '0.0016'), (7, '1.1766'), (8, '1.59'), (9, '1.1942'), (10, '0.0428')]",
     "method": "detail_table_cross_validated",
@@ -29087,7 +29109,13 @@
     "distribution_fee": "0.91",
     "peer_avg_fee": "1.59",
     "total_fee_and_cost": "1.0944",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "134",
+      "2y": "274",
+      "3y": "421",
+      "5y": "738",
+      "10y": "1681"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -29113,10 +29141,12 @@
     "page": 45,
     "source_pages": [
       45,
-      42
+      42,
+      48
     ],
     "field_source_pages": {
-      "sales_commission_desc": 42
+      "sales_commission_desc": 42,
+      "cost_projection_per_10m": 48
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '0.91'), (3, '0.01'), (4, '0.005'), (5, '1.075'), (6, '0.0017'), (7, '1.0767'), (8, '1.59'), (9, '1.0944'), (10, '0.0485')]",
     "method": "detail_table_cross_validated",
@@ -29157,7 +29187,13 @@
     "distribution_fee": "0.82",
     "peer_avg_fee": "1.59",
     "total_fee_and_cost": "1.0044",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "134",
+      "2y": "274",
+      "3y": "421",
+      "5y": "738",
+      "10y": "1681"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -29183,10 +29219,12 @@
     "page": 45,
     "source_pages": [
       45,
-      42
+      42,
+      48
     ],
     "field_source_pages": {
-      "sales_commission_desc": 42
+      "sales_commission_desc": 42,
+      "cost_projection_per_10m": 48
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '0.82'), (3, '0.01'), (4, '0.005'), (5, '0.985'), (6, '0.0017'), (7, '0.9867'), (8, '1.59'), (9, '1.0044'), (10, '0.0483')]",
     "method": "detail_table_cross_validated",
@@ -30586,7 +30624,13 @@
     "distribution_fee": "1.01",
     "peer_avg_fee": "1.59",
     "total_fee_and_cost": "1.1942",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "134",
+      "2y": "274",
+      "3y": "421",
+      "5y": "738",
+      "10y": "1681"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -30612,10 +30656,12 @@
     "page": 45,
     "source_pages": [
       45,
-      42
+      42,
+      48
     ],
     "field_source_pages": {
-      "sales_commission_desc": 42
+      "sales_commission_desc": 42,
+      "cost_projection_per_10m": 48
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '1.01'), (3, '0.01'), (4, '0.005'), (5, '1.175'), (6, '0.0016'), (7, '1.1766'), (8, '1.59'), (9, '1.1942'), (10, '0.0428')]",
     "method": "detail_table_cross_validated",
@@ -30656,7 +30702,13 @@
     "distribution_fee": "0.91",
     "peer_avg_fee": "1.59",
     "total_fee_and_cost": "1.0944",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "134",
+      "2y": "274",
+      "3y": "421",
+      "5y": "738",
+      "10y": "1681"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -30682,10 +30734,12 @@
     "page": 45,
     "source_pages": [
       45,
-      42
+      42,
+      48
     ],
     "field_source_pages": {
-      "sales_commission_desc": 42
+      "sales_commission_desc": 42,
+      "cost_projection_per_10m": 48
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '0.91'), (3, '0.01'), (4, '0.005'), (5, '1.075'), (6, '0.0017'), (7, '1.0767'), (8, '1.59'), (9, '1.0944'), (10, '0.0485')]",
     "method": "detail_table_cross_validated",
@@ -30726,7 +30780,13 @@
     "distribution_fee": "0.82",
     "peer_avg_fee": "1.59",
     "total_fee_and_cost": "1.0044",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "134",
+      "2y": "274",
+      "3y": "421",
+      "5y": "738",
+      "10y": "1681"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -30752,10 +30812,12 @@
     "page": 45,
     "source_pages": [
       45,
-      42
+      42,
+      48
     ],
     "field_source_pages": {
-      "sales_commission_desc": 42
+      "sales_commission_desc": 42,
+      "cost_projection_per_10m": 48
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '0.82'), (3, '0.01'), (4, '0.005'), (5, '0.985'), (6, '0.0017'), (7, '0.9867'), (8, '1.59'), (9, '1.0044'), (10, '0.0483')]",
     "method": "detail_table_cross_validated",
@@ -32373,7 +32435,13 @@
     "distribution_fee": "0.35",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.5171",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "55",
+      "2y": "112",
+      "3y": "173",
+      "5y": "303",
+      "10y": "690"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -32398,10 +32466,12 @@
     ],
     "page": 40,
     "source_pages": [
-      40
+      40,
+      43
     ],
     "field_source_pages": {
-      "sales_commission_desc": 40
+      "sales_commission_desc": 40,
+      "cost_projection_per_10m": 43
     },
     "evidence": "[상세표 보강] [(1, '0.15'), (2, '0.35'), (3, '0.01'), (4, '0.005'), (5, '0.515'), (6, '0.0021'), (7, '0.5171'), (9, '0.5352'), (10, '0.0483')]",
     "method": "detail_table_cross_validated",
@@ -33926,7 +33996,13 @@
     "distribution_fee": "0.210",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.3100",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "32",
+      "2y": "65",
+      "3y": "100",
+      "5y": "176",
+      "10y": "400"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -33944,10 +34020,12 @@
     "page": 37,
     "source_pages": [
       37,
-      36
+      36,
+      39
     ],
     "field_source_pages": {
-      "sales_commission_desc": 36
+      "sales_commission_desc": 36,
+      "cost_projection_per_10m": 39
     },
     "evidence": "[상세표 보강] [(1, '0.0750'), (2, '0.210'), (3, '0.0150'), (4, '0.0100'), (6, '0.3100'), (7, '0.3100')]",
     "method": "detail_table_cross_validated",
@@ -33977,6 +34055,14 @@
         "source": "상세표",
         "value": "0.3100",
         "page": 37
+      }
+    ],
+    "source_corrections": [
+      {
+        "field": "cost_projection_per_10m",
+        "raw": "A-G (39쪽 예상비용표에 두 번째 행도 \"A-G\"로 중복 인쇄됨)",
+        "used": "C-G",
+        "reason": "선취 클래스쌍(A vs A-G)·미징구 클래스쌍(C vs C-G)의 총보수 비율과 10년 누적비용 비율을 대조하면 두 번째 행(32/65/100/176/400)이 총보수 0.31%인 C-G와, 첫 번째 행(33/59/88/148/329)이 총보수 0.25%인 A-G와 일치한다"
       }
     ],
     "as_of": "2025-12-31"
@@ -35239,15 +35325,15 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.15"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.02"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.00"
       }
     ],
@@ -35337,15 +35423,15 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.15"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.02"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.00"
       }
     ],
@@ -35373,15 +35459,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.15"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.02"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.00"
       }
     ],
@@ -36144,7 +36230,13 @@
     "distribution_fee": "0.21",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2991",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "31",
+      "2y": "63",
+      "3y": "97",
+      "5y": "169",
+      "10y": "386"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -36363,7 +36455,13 @@
     "distribution_fee": "0.10",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.1891",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "19",
+      "2y": "40",
+      "3y": "61",
+      "5y": "107",
+      "10y": "244"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -45211,7 +45309,7 @@
         "value": "0.000"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.005"
       }
     ],
@@ -45871,7 +45969,7 @@
         "value": "0.003"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.005"
       }
     ],
@@ -46015,7 +46113,7 @@
         "value": "0.002"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.005"
       }
     ],
@@ -47265,15 +47363,15 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47363,15 +47461,15 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47461,15 +47559,15 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47559,15 +47657,15 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47589,15 +47687,15 @@
     "cost_projection_per_10m": {},
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47654,15 +47752,15 @@
     "cost_projection_per_10m": {},
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47719,15 +47817,15 @@
     "cost_projection_per_10m": {},
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47790,15 +47888,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47864,15 +47962,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -47938,15 +48036,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48012,15 +48110,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48086,15 +48184,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48160,15 +48258,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48234,15 +48332,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48308,15 +48406,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48382,15 +48480,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -48456,15 +48554,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.683"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.030"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.010"
       }
     ],
@@ -52136,7 +52234,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52148,7 +52246,7 @@
         "value": "0.0023"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0039"
       }
     ],
@@ -52236,7 +52334,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52248,7 +52346,7 @@
         "value": "0.0023"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0039"
       }
     ],
@@ -52336,7 +52434,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52348,7 +52446,7 @@
         "value": "0.0023"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0039"
       }
     ],
@@ -52436,7 +52534,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52448,7 +52546,7 @@
         "value": "0.0023"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0039"
       }
     ],
@@ -52480,7 +52578,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52488,7 +52586,7 @@
         "value": "0.012"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0048"
       }
     ],
@@ -52552,7 +52650,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52560,7 +52658,7 @@
         "value": "0.012"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0039"
       }
     ],
@@ -52624,7 +52722,7 @@
         "value": "0.07"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.015"
       },
       {
@@ -52636,7 +52734,7 @@
         "value": "0.0023"
       },
       {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.0039"
       }
     ],
@@ -54901,11 +54999,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -54999,11 +55097,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55097,11 +55195,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55195,11 +55293,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55231,11 +55329,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55305,11 +55403,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55379,11 +55477,11 @@
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55449,15 +55547,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55523,15 +55621,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55597,15 +55695,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55671,15 +55769,15 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.1"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55821,7 +55919,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -55925,7 +56023,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56029,7 +56127,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56133,7 +56231,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56169,7 +56267,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56245,7 +56343,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56321,7 +56419,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56397,7 +56495,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56473,7 +56571,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56549,7 +56647,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56625,7 +56723,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56701,7 +56799,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56775,7 +56873,7 @@
         "value": "0.01"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.01"
       }
     ],
@@ -56917,10 +57015,6 @@
       {
         "label": "other_expense",
         "value": "0.0023"
-      },
-      {
-        "label": null,
-        "value": "0.2544"
       }
     ],
     "field_source_pages": {
@@ -59480,7 +59574,13 @@
     "distribution_fee": "0.0840",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.2126",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "22",
+      "2y": "44",
+      "3y": "68",
+      "5y": "120",
+      "10y": "271"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -64465,7 +64565,7 @@
     "sales_commission_desc": null,
     "total_fee": "0.843",
     "distribution_fee": "0.50",
-    "peer_avg_fee": null,
+    "peer_avg_fee": "-",
     "total_fee_and_cost": "0.843",
     "cost_projection_per_10m": {
       "1y": "86",
@@ -64523,6 +64623,7 @@
     "distribution_fee_after_conversion": "0.08",
     "total_fee_and_cost_after_conversion": "0.200",
     "conversion_trigger_nav_price": 1060,
+    "peer_avg_fee_after_conversion": "-",
     "as_of": "2025-09-08"
   },
   {
@@ -64530,7 +64631,7 @@
     "sales_commission_desc": null,
     "total_fee": "0.343",
     "distribution_fee": "0.00",
-    "peer_avg_fee": null,
+    "peer_avg_fee": "-",
     "total_fee_and_cost": "0.343",
     "cost_projection_per_10m": {
       "1y": "35",
@@ -64588,6 +64689,7 @@
     "distribution_fee_after_conversion": "0.00",
     "total_fee_and_cost_after_conversion": "0.120",
     "conversion_trigger_nav_price": 1060,
+    "peer_avg_fee_after_conversion": "-",
     "as_of": "2025-09-08"
   },
   {
@@ -64595,7 +64697,7 @@
     "sales_commission_desc": null,
     "total_fee": "0.743",
     "distribution_fee": "0.40",
-    "peer_avg_fee": null,
+    "peer_avg_fee": "-",
     "total_fee_and_cost": "0.743",
     "cost_projection_per_10m": {
       "1y": "76",
@@ -64653,6 +64755,7 @@
     "distribution_fee_after_conversion": "0.07",
     "total_fee_and_cost_after_conversion": "0.190",
     "conversion_trigger_nav_price": 1060,
+    "peer_avg_fee_after_conversion": "-",
     "as_of": "2025-09-08"
   },
   {
@@ -64660,7 +64763,7 @@
     "sales_commission_desc": null,
     "total_fee": "0.543",
     "distribution_fee": "0.20",
-    "peer_avg_fee": null,
+    "peer_avg_fee": "-",
     "total_fee_and_cost": "0.543",
     "cost_projection_per_10m": {
       "1y": "56",
@@ -64718,6 +64821,7 @@
     "distribution_fee_after_conversion": "0.035",
     "total_fee_and_cost_after_conversion": "0.155",
     "conversion_trigger_nav_price": 1060,
+    "peer_avg_fee_after_conversion": "-",
     "as_of": "2025-09-08"
   },
   {
@@ -64725,7 +64829,7 @@
     "sales_commission_desc": null,
     "total_fee": "0.643",
     "distribution_fee": "0.30",
-    "peer_avg_fee": null,
+    "peer_avg_fee": "-",
     "total_fee_and_cost": "0.643",
     "cost_projection_per_10m": {
       "1y": "66",
@@ -64783,6 +64887,7 @@
     "distribution_fee_after_conversion": "0.068",
     "total_fee_and_cost_after_conversion": "0.188",
     "conversion_trigger_nav_price": 1060,
+    "peer_avg_fee_after_conversion": "-",
     "as_of": "2025-09-08"
   },
   {
@@ -64790,7 +64895,7 @@
     "sales_commission_desc": null,
     "total_fee": "0.493",
     "distribution_fee": "0.15",
-    "peer_avg_fee": null,
+    "peer_avg_fee": "-",
     "total_fee_and_cost": "0.493",
     "cost_projection_per_10m": {
       "1y": "51",
@@ -64848,6 +64953,7 @@
     "distribution_fee_after_conversion": "0.034",
     "total_fee_and_cost_after_conversion": "0.154",
     "conversion_trigger_nav_price": 1060,
+    "peer_avg_fee_after_conversion": "-",
     "as_of": "2025-09-08"
   },
   {
@@ -83728,7 +83834,13 @@
     "distribution_fee": "1.350",
     "peer_avg_fee": "1.590",
     "total_fee_and_cost": "2.052",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "226",
+      "2y": "447",
+      "3y": "662",
+      "5y": "1075",
+      "10y": "2306"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -83754,10 +83866,12 @@
     "page": 30,
     "source_pages": [
       30,
-      28
+      28,
+      31
     ],
     "field_source_pages": {
-      "sales_commission_desc": 28
+      "sales_commission_desc": 28,
+      "cost_projection_per_10m": 31
     },
     "evidence": "[상세표 보강] [(1, '0.650'), (2, '1.350'), (3, '0.030'), (4, '0.020'), (5, '2.050'), (6, '0.002'), (7, '2.052'), (8, '1.590'), (9, '0.254')]",
     "method": "detail_table_cross_validated",
@@ -83798,7 +83912,13 @@
     "distribution_fee": "1.200",
     "peer_avg_fee": "1.590",
     "total_fee_and_cost": "1.902",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "226",
+      "2y": "447",
+      "3y": "662",
+      "5y": "1075",
+      "10y": "2306"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -83824,10 +83944,12 @@
     "page": 30,
     "source_pages": [
       30,
-      28
+      28,
+      31
     ],
     "field_source_pages": {
-      "sales_commission_desc": 28
+      "sales_commission_desc": 28,
+      "cost_projection_per_10m": 31
     },
     "evidence": "[상세표 보강] [(1, '0.650'), (2, '1.200'), (3, '0.030'), (4, '0.020'), (5, '1.900'), (6, '0.002'), (7, '1.902'), (8, '1.590'), (9, '0.243')]",
     "method": "detail_table_cross_validated",
@@ -83868,7 +83990,13 @@
     "distribution_fee": "1.000",
     "peer_avg_fee": "1.590",
     "total_fee_and_cost": "1.702",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "226",
+      "2y": "447",
+      "3y": "662",
+      "5y": "1075",
+      "10y": "2306"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -83894,10 +84022,12 @@
     "page": 30,
     "source_pages": [
       30,
-      28
+      28,
+      31
     ],
     "field_source_pages": {
-      "sales_commission_desc": 28
+      "sales_commission_desc": 28,
+      "cost_projection_per_10m": 31
     },
     "evidence": "[상세표 보강] [(1, '0.650'), (2, '1.000'), (3, '0.030'), (4, '0.020'), (5, '1.700'), (6, '0.002'), (7, '1.702'), (8, '1.590'), (9, '0.259')]",
     "method": "detail_table_cross_validated",
@@ -83942,7 +84072,8 @@
       "1y": "75",
       "2y": "154",
       "3y": "237",
-      "5y": "415"
+      "5y": "415",
+      "10y": "944"
     },
     "fee_breakdown": [
       {
@@ -84019,7 +84150,8 @@
       "1y": "72",
       "2y": "147",
       "3y": "227",
-      "5y": "397"
+      "5y": "397",
+      "10y": "905"
     },
     "fee_breakdown": [
       {
@@ -84774,7 +84906,8 @@
       "1y": "73",
       "2y": "147",
       "3y": "224",
-      "5y": "383"
+      "5y": "383",
+      "10y": "824"
     },
     "fee_breakdown": [
       {
@@ -85239,7 +85372,13 @@
     "distribution_fee": "1.200",
     "peer_avg_fee": "1.600",
     "total_fee_and_cost": "1.830",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "218",
+      "2y": "414",
+      "3y": "574",
+      "5y": "846",
+      "10y": "1654"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -85265,10 +85404,12 @@
     "page": 35,
     "source_pages": [
       35,
-      33
+      33,
+      36
     ],
     "field_source_pages": {
-      "sales_commission_desc": 33
+      "sales_commission_desc": 33,
+      "cost_projection_per_10m": 36
     },
     "evidence": "[상세표 보강] [(1, '0.550'), (2, '1.200'), (3, '0.020'), (4, '0.020'), (5, '1.790'), (6, '0.002'), (7, '1.792'), (8, '1.600'), (9, '1.830'), (10, '1.0196')]",
     "method": "detail_table_cross_validated",
@@ -85309,7 +85450,13 @@
     "distribution_fee": "0.800",
     "peer_avg_fee": "1.600",
     "total_fee_and_cost": "1.416",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "218",
+      "2y": "414",
+      "3y": "574",
+      "5y": "846",
+      "10y": "1654"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -85335,10 +85482,12 @@
     "page": 35,
     "source_pages": [
       35,
-      33
+      33,
+      36
     ],
     "field_source_pages": {
-      "sales_commission_desc": 33
+      "sales_commission_desc": 33,
+      "cost_projection_per_10m": 36
     },
     "evidence": "[상세표 보강] [(1, '0.550'), (2, '0.800'), (3, '0.020'), (4, '0.020'), (5, '1.390'), (6, '0.002'), (7, '1.392'), (8, '1.600'), (9, '1.416'), (10, '0.9592')]",
     "method": "detail_table_cross_validated",
@@ -85379,7 +85528,13 @@
     "distribution_fee": "0.500",
     "peer_avg_fee": "1.600",
     "total_fee_and_cost": "1.118",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "218",
+      "2y": "414",
+      "3y": "574",
+      "5y": "846",
+      "10y": "1654"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -85405,10 +85560,12 @@
     "page": 35,
     "source_pages": [
       35,
-      33
+      33,
+      36
     ],
     "field_source_pages": {
-      "sales_commission_desc": 33
+      "sales_commission_desc": 33,
+      "cost_projection_per_10m": 36
     },
     "evidence": "[상세표 보강] [(1, '0.550'), (2, '0.500'), (3, '0.020'), (4, '0.020'), (5, '1.090'), (6, '0.002'), (7, '1.092'), (8, '1.600'), (9, '1.118'), (10, '0.9631')]",
     "method": "detail_table_cross_validated",
@@ -87840,27 +87997,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "1.472"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.336"
       }
     ],
@@ -87944,27 +88097,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "1.206"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.785"
       }
     ],
@@ -88056,27 +88205,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "1.805"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.000"
       }
     ],
@@ -88168,27 +88313,23 @@
     ],
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "1.348"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.428"
       }
     ],
@@ -88216,27 +88357,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "1.275"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.000"
       }
     ],
@@ -88296,27 +88433,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "1.515"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.000"
       }
     ],
@@ -88376,27 +88509,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "0.895"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.259"
       }
     ],
@@ -88456,27 +88585,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "1.170"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.438"
       }
     ],
@@ -88536,27 +88661,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "0.875"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.258"
       }
     ],
@@ -88616,27 +88737,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "0.855"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "0.000"
       }
     ],
@@ -88696,27 +88813,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "1.702"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.827"
       }
     ],
@@ -88776,27 +88889,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "1.302"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.724"
       }
     ],
@@ -88856,27 +88965,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "1.139"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.330"
       }
     ],
@@ -88936,27 +89041,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.001"
       },
       {
-        "label": null,
-        "value": "1.642"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "2.142"
       }
     ],
@@ -89016,27 +89117,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.002"
       },
       {
-        "label": null,
-        "value": "1.235"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.531"
       }
     ],
@@ -89096,27 +89193,23 @@
     },
     "fee_breakdown": [
       {
-        "label": null,
+        "label": "management_fee",
         "value": "0.800"
       },
       {
-        "label": null,
+        "label": "trustee_fee",
         "value": "0.040"
       },
       {
-        "label": null,
+        "label": "admin_fee",
         "value": "0.015"
       },
       {
-        "label": null,
+        "label": "other_expense",
         "value": "0.000"
       },
       {
-        "label": null,
-        "value": "1.100"
-      },
-      {
-        "label": null,
+        "label": "transaction_cost",
         "value": "1.345"
       }
     ],
@@ -92804,7 +92897,13 @@
     "distribution_fee": "0.8200",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "1.5750",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "161",
+      "2y": "331",
+      "3y": "509",
+      "5y": "892",
+      "10y": "2031"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -92829,9 +92928,12 @@
     ],
     "page": 29,
     "source_pages": [
-      29
+      29,
+      31
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 31
+    },
     "evidence": "[상세표 보강] [(1, '0.7000'), (2, '0.8200'), (3, '0.0300'), (4, '0.0200'), (5, '1.5700'), (7, '0.0050'), (8, '1.5750'), (9, '1.5750'), (10, '0.1324')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -93015,7 +93117,13 @@
     "distribution_fee": "0.2600",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "1.0100",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "104",
+      "2y": "212",
+      "3y": "326",
+      "5y": "572",
+      "10y": "1302"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",
@@ -93032,9 +93140,12 @@
     ],
     "page": 29,
     "source_pages": [
-      29
+      29,
+      31
     ],
-    "field_source_pages": {},
+    "field_source_pages": {
+      "cost_projection_per_10m": 31
+    },
     "evidence": "[상세표 보강] [(1, '0.7000'), (2, '0.2600'), (3, '0.0300'), (4, '0.0200'), (5, '1.0100'), (8, '1.0100'), (9, '1.0100')]",
     "method": "detail_table_cross_validated",
     "confidence": 0.7,
@@ -95011,7 +95122,13 @@
     "distribution_fee": "0.200",
     "peer_avg_fee": "-",
     "total_fee_and_cost": "0.966",
-    "cost_projection_per_10m": {},
+    "cost_projection_per_10m": {
+      "1y": "99",
+      "2y": "201",
+      "3y": "308",
+      "5y": "535",
+      "10y": "1185"
+    },
     "fee_breakdown": [
       {
         "label": "management_fee",

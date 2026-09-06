@@ -7337,9 +7337,9 @@
     "attributes": [
       "기타"
     ],
-    "retail": true,
+    "retail": false,
     "aka": [],
-    "description": "창구 · 기타",
+    "description": "사원복지연기금 수령자 전용 · 창구",
     "raw_label": "수수료미징구-오프라인-기타",
     "page": 9
   },
@@ -16774,21 +16774,6 @@
     "description": "창구 · 기관 전용",
     "raw_label": "수수료미징구-오프라인-기관",
     "page": 9
-  },
-  {
-    "product_code": "KR5194450018",
-    "class_code": "I",
-    "fee_type": "미징구",
-    "channel": "오프라인",
-    "account_type": null,
-    "attributes": [
-      "고액"
-    ],
-    "retail": false,
-    "aka": [],
-    "description": "창구 · 고액 전용",
-    "raw_label": "수수료미징구-오프라인-고액",
-    "page": 30
   },
   {
     "product_code": "KR5194450018",

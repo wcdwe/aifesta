@@ -46,7 +46,7 @@ def main():
                 break
     class_rows = rows("class_enrichment.csv")
     mapping_counts = Counter(r["mapping_status"] for r in class_rows)
-    if sum(mapping_counts.values()) != 1173:
+    if sum(mapping_counts.values()) != 1172:
         errors.append("class enrichment row count changed")
     yearly = rows("performance_yearly.csv")
     flagged = [r for r in yearly if r["quality_status"] != "NORMAL"]
