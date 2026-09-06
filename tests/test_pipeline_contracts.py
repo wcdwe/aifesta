@@ -237,5 +237,27 @@ class PipelineContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             QueryFilter(field="risk_level", operator="gte", value="NaN", source_text="q")
 
+    def test_become_verb_is_not_read_as_contract_termination(self):
+        # "~해지다"(정해지다·가능해지다)는 "~하게 되다"라는 흔한 구문이지
+        # 계약 해지가 아니다. 이걸 환매 질문으로 분류하면 제도 질문에 환매
+        # 설명이 없다는 이유로 답변이 영영 반려된다.
+        from product_facts import detect_intents
+        for question in (
+            "DC와 DB, 퇴직금이 정해지는 방식이랑 운용 주체가 어떻게 다른가요?",
+            "수익률이 어떻게 정해지나요?",
+            "자금이 필요해지면 어떻게 해야 하나요?",
+        ):
+            self.assertNotIn("redemption", detect_intents(question), question)
+
+    def test_real_termination_and_withdrawal_still_detected(self):
+        from product_facts import detect_intents
+        for question in (
+            "연금저축을 중간에 해지하면 세금상 불이익이 있어?",
+            "중도해지는 어떤 경우에 가능한가요?",
+            "부분해지가 가능한가요?",
+            "IRP에서 중도인출할 수 있는 경우가 어떤 경우야?",
+        ):
+            self.assertIn("redemption", detect_intents(question), question)
+
 
 if __name__ == "__main__": unittest.main()

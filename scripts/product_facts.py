@@ -14,6 +14,7 @@
 
 import json
 import os
+import re
 import sqlite3
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -122,6 +123,24 @@ INTENT_KEYWORDS = {
 }
 
 
+# 한국어의 "~해지다"(정해지다·가능해지다·필요해지다)는 형용사·동사에 붙어
+# "~하게 되다"를 뜻하는 흔한 구문인데, 글자만 보면 계약 "해지"와 구별이 안
+# 된다. 실측: "퇴직금이 정해지는 방식"이 환매(redemption) 질문으로 분류돼,
+# 제도 질문에 환매 설명이 없다는 이유로 답변이 계속 반려됐다.
+#
+# 처음엔 뒤에 오는 어미(-는/-다/-면...)를 열거해 걸렀는데, 어미는 열린
+# 집합이라 넣어도 끝이 없었다("정해지나요"의 -나에서 또 샜다). 그래서 조건을
+# 뒤집는다: 앞에 한글이 붙은 "해지"는 기본적으로 이 동사 구문으로 보고,
+# 진짜 해지를 뜻하는 복합어만 예외로 둔다. 복합어는 도메인 용어라 닫힌
+# 집합이고 여기서 열거가 끝난다. 앞이 공백·문장 시작이면("펀드를 해지하면")
+# 애초에 이 규칙에 걸리지 않는다.
+_TERMINATION_COMPOUNDS = ("중도", "계약", "만기", "조기", "일부", "부분", "전액")
+_VERB_BECOME_RE = re.compile(
+    r"(?<=[가-힣])"
+    + "".join(f"(?<!{word})" for word in _TERMINATION_COMPOUNDS)
+    + r"해지")
+
+
 def detect_intents(question):
     """질문에서 알아본 의도 목록. 하나도 못 알아보면 빈 리스트.
 
@@ -135,7 +154,10 @@ def detect_intents(question):
     넘긴다. product_facts() 자신은 intents가 비어 오면 여전히 fee+return을
     기본값으로 쓴다(CLI로 이 모듈만 단독 호출할 때의 편의 기본값) - 그건
     이 함수가 아니라 product_facts()의 몫이라 그대로 둔다."""
-    q = (question or "").replace(" ", "")
+    # 낱말 경계는 띄어쓰기를 지우기 "전"에 봐야 한다. 먼저 지우면 "중간에
+    # 해지하면"이 "중간에해지하면"이 되어 앞 글자가 한글로 보이고, 진짜 해지가
+    # 동사 구문으로 오인된다.
+    q = _VERB_BECOME_RE.sub("\x00", question or "").replace(" ", "")
     return [k for k, kws in INTENT_KEYWORDS.items()
             if any(w.replace(" ", "") in q for w in kws)]
 
