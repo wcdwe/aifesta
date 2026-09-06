@@ -18,6 +18,9 @@ _INSTITUTION_SIGNAL = re.compile(
 _COVER_TOC = re.compile(r"\(표지\)|\(섹션\s*표지\)|목차|contents", re.IGNORECASE)
 _BARE_TOC = re.compile(r"^\s*[1-9][.)]\s*[^\n:：>→]{1,30}$")
 _FAQ_INDEX_LINE = re.compile(r"(?m)^\s*\d+(?:-\d+)?[.)]\s*.+\?\s*$")
+_CONTACT_SIGNAL = re.compile(r"주소|연락처|홈페이지|www\.|전화", re.I)
+_STRATEGY_SECTION = re.compile(r"투자전략|투자목적|투자방침|주요\s*투자대상")
+_RISK_SECTION = re.compile(r"투자위험|주요\s*위험|원금손실|시장위험|가격변동")
 _REQUEST_TERMS = {"어떻게", "어떻게해", "해주세요", "알려줘", "설명해줘", "되는", "거", "아니었나요"}
 
 
@@ -44,6 +47,8 @@ def _usable(hit: dict) -> bool:
     # 답 없이 질문 제목만 여러 개 나열한 FAQ 색인도 목차로 취급한다.
     if len(_FAQ_INDEX_LINE.findall(text)) >= 4 and not re.search(r"(?m)^\s*[-☞]\s*\S", text):
         return False
+    if len(_CONTACT_SIGNAL.findall(text)) >= 3:
+        return False
     # 1쪽의 짧은 제목은 표지일 가능성이 높다. 짧아도 콜론·문장 종결·수치가
     # 있으면 실제 사실일 수 있으므로 제외하지 않는다.
     if page == 1 and len(text) <= 45 and not re.search(r"[:：\d]|다[.!]?\s*$|요[.!]?\s*$", text):
@@ -64,8 +69,12 @@ def retrieve_document_hits(question: str, doc_type: str,
             current["rrf"] = current.get("rrf", 0.0) + 1.0 / (61 + rank)
             current["score"] = max(current.get("score") or 0.0, hit.get("score") or 0.0)
     hits = [hit for hit in pooled.values() if _usable(hit)]
+    section_pattern = _RISK_SECTION if re.search(r"위험|원금", question) else _STRATEGY_SECTION
     hits.sort(
-        key=lambda hit: (_coverage(hit, question), hit.get("rrf", 0.0), hit.get("score", 0.0)),
+        key=lambda hit: (
+            1 if section_pattern.search(hit.get("text") or "") else 0,
+            _coverage(hit, question), hit.get("rrf", 0.0), hit.get("score", 0.0),
+        ),
         reverse=True,
     )
     # 같은 페이지의 인접 청크 반복을 막는다.
@@ -115,13 +124,29 @@ def try_simple_product_document(question_id: str, question: str) -> dict | None:
 
     candidate = resolution.candidates[0]
     # 통합 저장소의 실제 상품 doc_type 값은 단수형 `product`다.
-    hits = retrieve_document_hits(question, "product", candidate.product_code)
+    subqueries = []
+    if re.search(r"투자전략|투자목적", question):
+        subqueries.append(f"{candidate.product_name} 투자목적 투자전략 투자방침")
+    if re.search(r"위험요인|주요\s*위험|원금", question):
+        subqueries.append(f"{candidate.product_name} 주요 투자위험 원금손실 가격변동위험")
+    subqueries = subqueries or [question]
+    hits, seen = [], set()
+    for subquery in subqueries:
+        for hit in retrieve_document_hits(subquery, "product", candidate.product_code)[:2]:
+            key = (hit.get("doc_id"), hit.get("page"))
+            if key not in seen:
+                seen.add(key)
+                hits.append(hit)
     if not hits:
         return None
     context = _context(hits)
     answer, how = generate(question, context)
     fallback_reason = None
     if answer:
+        answer = re.sub(
+            r"\[product/([^\]\s]+)\s+p\.(\d+)\]",
+            r"(출처: \1, p.\2)", answer,
+        )
         problems = verify_answer(question, answer, context)
         cited = "p." in answer and any(hit["doc_id"] in answer for hit in hits)
         if not cited:
@@ -129,6 +154,18 @@ def try_simple_product_document(question_id: str, question: str) -> dict | None:
         if problems:
             fallback_reason = problems
             answer = None
+        else:
+            cited_pairs = {
+                (doc, int(page))
+                for doc, page in re.findall(r"출처:\s*([^,()]+),\s*p\.(\d+)", answer)
+            }
+            used = [
+                hit for hit in hits
+                if (str(hit.get("doc_id")), int(hit.get("page"))) in cited_pairs
+            ]
+            if used:
+                hits = used
+                context = _context(hits)
     if not answer:
         answer = _fallback(hits[0])
         how = how + "; Python 검증 후 근거 발췌 사용"
@@ -141,7 +178,7 @@ def try_simple_product_document(question_id: str, question: str) -> dict | None:
             "1. Python Pre-router: SIMPLE_DOCUMENT\n"
             f"2. 상품 식별: {resolution.status} - {candidate.product_code} "
             f"({candidate.product_name})\n"
-            f"3. 상품 문서 Hybrid RAG: 표지·목차 제외, 페이지 중복 제거, 근거 {len(hits)}건\n"
+            f"3. 상품 문서 Hybrid RAG: 사실별 검색, 비본문 제외, 실제 사용 근거 {len(hits)}건\n"
             f"4. 답변 생성·검증: {how}"
             + (f"\n   - 생성 답변 반려 사유: {fallback_reason}" if fallback_reason else "")
         ),

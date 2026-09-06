@@ -8,6 +8,7 @@ from .executor import execute_plan
 from .query_analyzer import AnalysisOutcome, analyze
 from .schemas import QueryPlan, ToolExecutionResult
 from .validation_gate import RepairResult, run_validation_gate
+from .rule_planner import build_rule_plan
 
 
 Analyzer = Callable[[str], AnalysisOutcome]
@@ -41,9 +42,13 @@ def try_agent_payload(
 ) -> dict | None:
     """복합 질문용 새 Agent. 분석/생성 불가 시 기존 경로 사용을 위해 None."""
     analysis = analyzer(question)
-    if analysis.plan is None:
-        return None
     plan = analysis.plan
+    plan_origin = analysis.status
+    if plan is None:
+        plan = build_rule_plan(question)
+        plan_origin = f"{analysis.status}; Python 규칙 QueryPlan fallback"
+    if plan is None:
+        return None
     execution = executor(question, plan)
     if not execution.evidence:
         return None
@@ -77,7 +82,9 @@ def try_agent_payload(
         "question_id": str(question_id),
         "question": str(question),
         "retrieved_context": str(gate.context.text),
-        "think_trace": _trace(plan, execution, generated.status, gate),
+        "think_trace": f"0. 계획 출처: {plan_origin}\n" + _trace(
+            plan, execution, generated.status, gate
+        ),
         "answer": str(gate.answer),
         "route": "agent_v2",
     }

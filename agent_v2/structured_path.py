@@ -57,6 +57,10 @@ def try_fast_structured(question_id: str, question: str) -> dict | None:
     errors = _validate_result(summary, evidence, candidate.product_code)
     if errors:
         return None
+    if class_code and {"fee", "risk"}.issubset(set(intents)):
+        summary += (
+            f"\n※ 위험등급은 상품 기준이며, 총보수는 {class_code} 클래스 기준입니다."
+        )
 
     return {
         "question_id": str(question_id),
@@ -74,4 +78,3 @@ def try_fast_structured(question_id: str, question: str) -> dict | None:
         # 기존 평가·호출자와의 하위 호환을 유지한다.
         "route": "single_product",
     }
-

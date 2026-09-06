@@ -57,6 +57,8 @@ from agent_v2.document_path import (  # noqa: E402
 from agent_v2.structured_path import try_fast_structured  # noqa: E402
 from agent_v2.templates import build_policy_payload  # noqa: E402
 from agent_v2.orchestrator import try_agent_payload  # noqa: E402
+from agent_v2.filter_path import try_fast_filter  # noqa: E402
+from agent_v2.comparison_path import try_fast_compare  # noqa: E402
 from agent_v2.api_contract import ResponseCache, validate_api_response  # noqa: E402
 from agent_v2.telemetry import reset_usage, usage_snapshot  # noqa: E402
 
@@ -476,6 +478,14 @@ def answer_payload(question_id: str, question: str) -> dict:
         structured_body = try_fast_structured(question_id, question)
         if structured_body is not None:
             return structured_body
+    if pre_decision.route == "FAST_FILTER":
+        filter_body = try_fast_filter(question_id, question)
+        if filter_body is not None:
+            return filter_body
+    if pre_decision.route == "FAST_COMPARE":
+        compare_body = try_fast_compare(question_id, question)
+        if compare_body is not None:
+            return compare_body
     if pre_decision.route == "SIMPLE_DOCUMENT":
         document_body = try_simple_product_document(question_id, question)
         if document_body is not None:

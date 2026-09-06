@@ -22,6 +22,9 @@ _DOCUMENT = re.compile(
     r"만기\s*상환|재예치"
 )
 _COMPLEX = re.compile(r"비교|차이|각각|동시에|이면서|그리고|까지|모두")
+_FILTER_FIELD = re.compile(r"IRP|DC|연금저축|채권형|주식형|위험등급|총보수|수익률|AUM|설정액", re.I)
+_FILTER_OPERATION = re.compile(r"모두|전부|상위\s*\d+|이상|이하|초과|미만|존재|있는\s*상품|낮은\s*순|높은\s*순")
+_COMPARE = re.compile(r"비교|차이|각각|섞지\s*말")
 
 
 def pre_route(question: str) -> PreRouteDecision:
@@ -52,6 +55,16 @@ def pre_route(question: str) -> PreRouteDecision:
 
     products = find_products(text)
     intents = detect_intents(text)
+    if len(products) >= 2 and _COMPARE.search(text):
+        return PreRouteDecision(
+            route="FAST_COMPARE",
+            reasons=["복수 상품과 비교 항목을 Python 규칙으로 확정 가능"],
+        )
+    if _FILTER_FIELD.search(text) and _FILTER_OPERATION.search(text):
+        return PreRouteDecision(
+            route="FAST_FILTER",
+            reasons=["상품 조건·값 존재·전체/정렬 요구를 Python 규칙으로 확정 가능"],
+        )
     if len(products) == 1 and intents and not _COMPLEX.search(text):
         return PreRouteDecision(
             route="FAST_STRUCTURED",

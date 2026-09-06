@@ -101,7 +101,10 @@ class ProductResolution(BaseModel):
 
 
 class PreRouteDecision(BaseModel):
-    route: Literal["FAST_POLICY", "FAST_STRUCTURED", "SIMPLE_DOCUMENT", "AGENT"]
+    route: Literal[
+        "FAST_POLICY", "FAST_STRUCTURED", "FAST_FILTER", "FAST_COMPARE",
+        "SIMPLE_DOCUMENT", "AGENT",
+    ]
     reasons: list[str] = Field(default_factory=list)
     safety_flags: list[str] = Field(default_factory=list)
     template_id: str | None = None

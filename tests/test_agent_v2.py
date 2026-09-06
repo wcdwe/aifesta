@@ -1,5 +1,6 @@
 import unittest
 import json
+import re
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -23,10 +24,13 @@ from agent_v2.orchestrator import try_agent_payload
 from agent_v2.query_analyzer import AnalysisOutcome
 from agent_v2.schemas import ToolExecutionResult
 from agent_v2.api_contract import ResponseCache, validate_api_response
+from agent_v2.rule_planner import build_rule_plan
 from agent_v2.telemetry import (
     record_call, record_failure, record_success, reset_usage, usage_snapshot,
 )
 from agent_v2.structured_path import try_fast_structured
+from agent_v2.filter_path import try_fast_filter
+from agent_v2.comparison_path import try_fast_compare
 from agent_v2.templates import build_policy_payload
 
 
@@ -79,7 +83,13 @@ class PreRouterTests(unittest.TestCase):
 
     def test_two_product_difference_is_not_fast_structured(self):
         decision = pre_route("하나파워e단기채와 한국투자 크레딧포커스 ESG 수익률 차이가 어때?")
-        self.assertEqual(decision.route, "AGENT")
+        self.assertEqual(decision.route, "FAST_COMPARE")
+
+    def test_clear_multi_filter_uses_zero_llm_path(self):
+        decision = pre_route(
+            "IRP에서 투자 가능하고 채권형이면서 최근 5년 수익률이 존재하는 상품을 모두 찾아줘"
+        )
+        self.assertEqual(decision.route, "FAST_FILTER")
 
     def test_high_risk_llm_answer_requires_llm_validation(self):
         risk = assess_risk(["추천"], ["loss_intolerance"], "LLM")
@@ -162,6 +172,27 @@ class GroundingValidatorTests(unittest.TestCase):
             self.plan, self.evidence, self.context,
         )
         self.assertEqual(result.retry_action, "SAFE_FALLBACK")
+
+    def test_false_no_results_is_rejected_when_filter_has_rows(self):
+        plan = QueryPlan(intents=["조건검색"], tools=[])
+        evidence = [Evidence(
+            evidence_id="FILTER-1", kind="structured", content="상품 A (KR1234567890)",
+            source="structured_store.db", product_code="KR1234567890",
+        )]
+        result = validate_grounding(
+            "조건 상품을 모두 찾아줘", "조건에 맞는 상품을 찾을 수 없습니다.",
+            plan, evidence, ContextBundle(text=evidence[0].content, evidence_ids=["FILTER-1"]),
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(any("FILTER 결과" in e.problem for e in result.errors))
+
+    def test_invented_general_scope_is_rejected(self):
+        result = validate_grounding(
+            "상품 비교", "이는 일반 가입 기준입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(any("가입 범위" in e.problem for e in result.errors))
 
     def test_truncated_all_matches_retrieves_more(self):
         plan = QueryPlan(
@@ -514,6 +545,17 @@ class QueryAnalyzerTests(unittest.TestCase):
         "plan":[{"step":1,"tool":"COMPARE","purpose":"비교","depends_on":[]}]}"""
         self.assertIsNone(parse_plan(raw, "두 상품 비교").plan)
 
+    def test_rule_plan_recovers_clear_filter_when_llm_json_fails(self):
+        plan = build_rule_plan(
+            "IRP에서 투자 가능하고 채권형이며 최근 5년 수익률이 있는 상품을 모두 찾아줘"
+        )
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan.tools, ["FILTER"])
+        self.assertTrue(plan.return_all)
+        self.assertEqual({item.field for item in plan.filters}, {
+            "account_type", "asset_type", "return_5y",
+        })
+
 
 class PlanExecutorTests(unittest.TestCase):
     def test_multi_filter_returns_all_matching_products(self):
@@ -618,6 +660,36 @@ class FastStructuredTests(unittest.TestCase):
         result = try_fast_structured("Q", "솔로몬 국공채 펀드 총보수 알려줘")
         self.assertIsNone(result)
 
+    def test_product_and_class_scope_are_explicit(self):
+        result = try_fast_structured(
+            "Q", "미래에셋장기성장포커스 A-e 클래스 총보수와 위험등급 알려줘"
+        )
+        self.assertIn("위험등급은 상품 기준", result["answer"])
+
+
+class FastFilterAndCompareTests(unittest.TestCase):
+    def test_irp_bond_five_year_filter_lists_every_db_match(self):
+        result = try_fast_filter(
+            "Q", "IRP에서 투자 가능하고 채권형이면서 최근 5년 수익률이 존재하는 상품을 모두 찾아줘"
+        )
+        self.assertIsNotNone(result)
+        self.assertIn("LLM 호출 없음", result["think_trace"])
+        self.assertNotIn("찾지 못했습니다", result["answer"])
+        self.assertIn("과거 수익률은 미래", result["answer"])
+        count = int(re.search(r"조건에 맞는 상품: (\d+)개", result["answer"]).group(1))
+        self.assertGreater(count, 0)
+        self.assertEqual(result["answer"].count("(출처: class_returns"), count)
+
+    def test_comparison_skips_llm_and_adds_return_limit(self):
+        result = try_fast_compare(
+            "Q", "미래에셋솔로몬장기국공채와 중장기국공채의 위험등급, 총보수, 최근 3년 수익률을 비교해줘"
+        )
+        self.assertIsNotNone(result)
+        self.assertIn("질의분석/답변생성 LLM 호출 없음", result["think_trace"])
+        self.assertIn("과거 수익률은 미래", result["answer"])
+        self.assertIn("기준일은 현재 구조화 자료에서", result["answer"])
+        self.assertIn("총보수 기준일", result["answer"])
+
 
 class SimpleDocumentTests(unittest.TestCase):
     def setUp(self):
@@ -635,12 +707,54 @@ class SimpleDocumentTests(unittest.TestCase):
         self.assertFalse(_usable({"doc_id": "d", "page": 1, "text": "(표지) 투자설명서"}))
         self.assertFalse(_usable({"doc_id": "d", "page": 2, "text": "1. 투자전략"}))
 
+    def test_contact_directory_is_rejected(self):
+        self.assertFalse(_usable({
+            "doc_id": "d", "page": 53,
+            "text": "회사 주소 서울특별시 연락처 02-1234-5678 홈페이지 www.example.com",
+        }))
+
     def test_product_document_path_is_scoped_and_cited(self):
         result = try_simple_product_document("Q", "미래에셋장기성장포커스 투자전략은 뭐야?")
         self.assertIsNotNone(result)
         self.assertEqual(result["route"], "rag")
         self.assertIn("p.", result["answer"])
         self.assertIn("상품 문서 Hybrid RAG", result["think_trace"])
+        self.assertLessEqual(result["retrieved_context"].count("\n---\n"), 3)
+        self.assertNotIn("p.53", result["retrieved_context"])
+
+    def test_product_answer_normalizes_citation_and_returns_only_used_evidence(self):
+        strategy = {
+            "doc_type": "product", "doc_id": "DOC-X", "page": 10,
+            "chunk_id": "s", "product_code": "KR510902511M",
+            "text": "투자전략: 국내 주식에 투자합니다.",
+        }
+        risk = {
+            "doc_type": "product", "doc_id": "DOC-X", "page": 20,
+            "chunk_id": "r", "product_code": "KR510902511M",
+            "text": "주요 투자위험: 가격 변동으로 원금손실이 발생할 수 있습니다.",
+        }
+        unused = {
+            "doc_type": "product", "doc_id": "DOC-X", "page": 30,
+            "chunk_id": "u", "product_code": "KR510902511M",
+            "text": "사용하지 않은 부가정보입니다.",
+        }
+        with patch(
+            "agent_v2.document_path.retrieve_document_hits",
+            side_effect=[[strategy, unused], [risk, unused]],
+        ), patch(
+            "agent_v2.document_path.generate",
+            return_value=(
+                "투자전략은 국내 주식 투자입니다. [product/DOC-X p.10] "
+                "주요 위험은 원금손실 가능성입니다. [product/DOC-X p.20]",
+                "가짜 생성",
+            ),
+        ):
+            result = try_simple_product_document(
+                "Q", "미래에셋장기성장포커스 투자전략과 주요 위험요인을 설명해줘"
+            )
+        self.assertIn("(출처: DOC-X, p.10)", result["answer"])
+        self.assertIn("(출처: DOC-X, p.20)", result["answer"])
+        self.assertNotIn("p.30", result["retrieved_context"])
 
     def test_atomic_institution_fact_skips_llm(self):
         result = try_simple_institution_document("Q", "IRP의 세액공제 한도는 얼마인가요?")

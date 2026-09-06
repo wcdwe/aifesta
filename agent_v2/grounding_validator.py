@@ -32,6 +32,8 @@ RE_GUARANTEE = re.compile(
 RE_UNIVERSAL = re.compile(r"(?:조건에 맞는|해당하는)?\s*(?:상품|펀드)?\s*(?:을|를)?\s*(모두|전부|전체)")
 RE_LOWEST_RISK_ERROR = re.compile(r"1등급[^.!?\n]{0,30}(?:가장\s*(?:낮은|안전)|최저\s*위험)")
 RE_HIGHEST_RISK_ERROR = re.compile(r"6등급[^.!?\n]{0,30}(?:가장\s*(?:높은|위험)|최고\s*위험)")
+RE_NO_RESULTS = re.compile(r"찾을\s*수\s*없|해당\s*(?:상품|펀드).{0,10}없|검색\s*결과.{0,10}없")
+RE_UNSUPPORTED_SCOPE = re.compile(r"일반\s*가입\s*기준|대표\s*클래스|기본\s*클래스|통상적인\s*조건")
 
 
 def _error(criterion: str, problem: str, correction: str,
@@ -165,6 +167,17 @@ def validate_grounding(
         errors.append(_error(
             "안전성 및 신뢰성", "특정 상품을 단정적으로 추천하거나 매수를 권유함",
             "확인된 비교 결과와 조건을 제시하고 최종 선택을 단정하지 않기",
+        ))
+    filter_evidence = [item for item in evidence if item.evidence_id.startswith("FILTER-")]
+    if filter_evidence and RE_NO_RESULTS.search(answer or ""):
+        errors.append(_error(
+            "정확성", "구조화 FILTER 결과가 존재하지만 검색 결과가 없다고 답함",
+            "FILTER 결과의 상품을 답변하거나 조건·결과 개수를 다시 확인",
+        ))
+    if RE_UNSUPPORTED_SCOPE.search(answer or "") and not RE_UNSUPPORTED_SCOPE.search(evidence_text):
+        errors.append(_error(
+            "정확성", "근거에 없는 대표·일반 가입 범위를 임의로 추가함",
+            "실제 클래스의 계좌 유형·판매 채널만 명시",
         ))
     if RE_GUARANTEE.search(answer or "") and not RE_GUARANTEE.search(evidence_text):
         errors.append(_error(
