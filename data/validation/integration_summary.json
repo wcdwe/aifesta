@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-06T01:37:36.146004+00:00",
+  "generated_at": "2026-09-06T07:14:00.138172+00:00",
   "status": "passed",
   "baseline": {
     "documents": 94,
@@ -14,7 +14,7 @@
     "product_master": 100,
     "class_enrichment": 1172,
     "periodic_return_rows": 5205,
-    "yearly_return_rows": 4717,
+    "yearly_return_rows": 4714,
     "fund_aum_history_rows": 284,
     "asset_mix_rows": 318
   },
