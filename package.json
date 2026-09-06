@@ -12,6 +12,7 @@
     "integrate:data": "node integration/run_python.js integration/build_integrated_store.py",
     "integrate:rag": "node integration/run_python.js integration/build_integrated_rag.py",
     "validate:integration": "node integration/run_python.js integration/validate_integration.py",
+    "validate:runtime": "node integration/run_python.js scripts/verify_data.py",
     "integrate:runtime": "node integration/run_python.js integration/build_runtime.py",
     "integrate:vector": "node integration/run_python.js scripts/build_vector_store.py --reset",
     "integrate:vector-flat": "node integration/run_python.js integration/build_flat_vector_store.py",
