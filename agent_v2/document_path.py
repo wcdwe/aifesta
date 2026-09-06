@@ -21,7 +21,69 @@ _FAQ_INDEX_LINE = re.compile(r"(?m)^\s*\d+(?:-\d+)?[.)]\s*.+\?\s*$")
 _CONTACT_SIGNAL = re.compile(r"주소|연락처|홈페이지|www\.|전화", re.I)
 _STRATEGY_SECTION = re.compile(r"투자전략|투자목적|투자방침|주요\s*투자대상")
 _RISK_SECTION = re.compile(r"투자위험|주요\s*위험|원금손실|시장위험|가격변동")
-_REQUEST_TERMS = {"어떻게", "어떻게해", "해주세요", "알려줘", "설명해줘", "되는", "거", "아니었나요"}
+_REQUEST_TERMS = {
+    "어떻게", "어떻게해", "해주세요", "알려줘", "설명해줘", "되는", "거", "아니었나요",
+    # 이 코퍼스가 대부분 FAQ 형식이라("~되나요?" 식 질문이 문서마다 즐비하다),
+    # 아래 낱말들은 질문 어디에 붙어 있든 거의 모든 페이지에 코사인 유사도와
+    # 무관하게 걸린다 - 실측(INST-05): "연금저축을 중도해지하면 세금이
+    # 어떻게 되나요?"에서 정답과 전혀 무관한 페이지들이 "어떻게"/"되나요"
+    # 때문에 정답 페이지(coverage=0)보다 coverage 점수가 높게 나왔다.
+    "되나요", "됩니까", "됩니다", "인가요", "합니까", "습니까", "하나요",
+    "그런가요", "가능한가요", "가능한가", "됐나요",
+}
+
+# 조사·흔한 의문형 어미가 명사에 그대로 붙은 원문 토큰("연금저축을",
+# "중도해지하면", "세금이")은 정답 청크가 조사 없는 원형("연금저축",
+# "중도해지", "세금")으로 적혀 있으면 그대로는 절대 안 걸린다. 형태소
+# 분석기를 새로 넣는 대신, 흔한 접미사만 하나 떼어 정규화 토큰을 "추가로"
+# 만든다 - 원문 토큰은 그대로 두고 검사 대상에 얹기만 한다.
+#
+# "도"(-도 조사) 같은 흔하고 애매한 접미사는 일부러 뺐다 - "위험도",
+# "수수료도"처럼 조사가 아니라 단어 자체의 일부인 경우까지 잘못 잘라
+# ("위험") 무관한 청크에 새로 걸릴 위험이 더 크다고 판단했다.
+_NORMALIZE_SUFFIXES = sorted([
+    "이라서", "라서", "이지만", "지만", "이라도", "라도",
+    "됩니까", "됩니다", "되나요", "됐나요", "인가요", "합니까", "습니까", "하나요",
+    "하려면", "하면은", "했나요",
+    "하면", "해서", "하고", "하는", "했을", "인가",
+    "에서", "에게", "한테", "까지", "부터", "으로",
+    "이나", "이란", "란",
+    "은", "는", "이", "가", "을", "를", "의", "에", "와", "과", "만", "로",
+], key=len, reverse=True)
+
+
+def _normalized_token(token: str) -> str | None:
+    """token 끝에서 접미사를 하나 떼어낸 정규화 형태. 어간이 2글자 미만으로
+    남으면(잘못 자를 위험이 크다) None."""
+    for suf in _NORMALIZE_SUFFIXES:
+        if token.endswith(suf) and len(token) - len(suf) >= 2:
+            return token[: -len(suf)]
+    return None
+
+
+# 이 코퍼스는 "제도(대상) + 행위 -> 결과"를 묻는 질문이 대부분인데("연금저축을
+# 중도해지하면 세금이 어떻게 되나요?" = 대상 연금저축 + 행위 중도해지 + 요구정보
+# 세금), 그런데 정작 대상 낱말("연금저축", "퇴직연금")은 이 코퍼스 문서
+# 대부분이 연금/퇴직연금 제도를 다루는 문서라 거의 모든 페이지에 등장한다 -
+# 변별력이 없다. 반면 행위 낱말("중도해지")은 그 페이지가 실제로 그 절차를
+# 다루는지를 정확히 가른다(실측: "연금저축"+"세금이"만 일치하는 무관한
+# ISA 절세 페이지가, "중도해지"가 일치하는 정답 페이지보다 대상 낱말까지
+# 덩달아 가중치를 받으면 오히려 더 높은 점수를 받는다). 그래서 행위
+# 낱말에만 가중치를 높이고, 대상·요구정보 낱말은 원래 가중치(글자 수)를
+# 그대로 둔다 - 길이로 짧은 낱말을 잘라내는 대신, 실제 변별력이 있는
+# 낱말군만 무겁게 본다.
+_ACTION_TERMS = {
+    "해지", "중도해지", "인출", "중도인출", "이전", "전환", "신청", "가입",
+    "수령", "개시", "만기", "연장", "환급", "환매", "감면", "승계", "이체", "납입",
+}
+_ANCHOR_WEIGHT_MULT = 3
+
+
+def _term_weight(form: str) -> int:
+    base = len(form)
+    if form in _ACTION_TERMS:
+        return base * _ANCHOR_WEIGHT_MULT
+    return base
 
 
 def _coverage(hit: dict, question: str) -> int:
@@ -30,7 +92,17 @@ def _coverage(hit: dict, question: str) -> int:
         token.lower() for token in re.findall(r"[가-힣A-Za-z0-9]+", question or "")
         if len(token) >= 2 and token not in _REQUEST_TERMS
     ]
-    return sum(len(token) for token in tokens if token in compact_text)
+    total = 0
+    for token in tokens:
+        forms = {token}
+        norm = _normalized_token(token)
+        if norm and norm not in _REQUEST_TERMS:
+            forms.add(norm)
+        total += max(
+            (_term_weight(form) for form in forms if form in compact_text),
+            default=0,
+        )
+    return total
 
 
 def _usable(hit: dict) -> bool:

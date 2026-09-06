@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from agent_v2.pre_router import assess_risk, pre_route
 from agent_v2.document_path import (
     _usable,
+    retrieve_document_hits,
     try_simple_institution_document,
     try_simple_product_document,
 )
@@ -791,6 +792,43 @@ class SimpleDocumentTests(unittest.TestCase):
 
     def test_unrelated_question_is_not_intercepted(self):
         self.assertIsNone(try_simple_institution_document("Q", "오늘 날씨가 어때?"))
+
+    def test_early_termination_tax_variants_rank_correct_evidence(self):
+        """_coverage()의 행위어(중도해지 등) 가중치가 여러 표현에 걸쳐
+        일반화되는지 확인한다. doc30 p.16/doc31 p.10은 둘 다 "DC, IRP
+        계약기간 만료 전 중도해지... 기타소득세(16.5%)" 조항을 그대로
+        담고 있다(2026-09-06 PDF 원문 대조 확인). 예전엔 이 셋 다 무관한
+        ISA 절세 페이지(doc23)가 "연금저축"+"세금이"만 일치해서 1등으로
+        올라왔다(실측, INST-05 회귀 방지)."""
+        questions = [
+            "연금저축을 중도해지하면 세금이 어떻게 되나요?",
+            "연금저축펀드를 중도에 해지하면 어떤 세금을 내나요?",
+            "연금저축 계약을 중도해지하면 어떤 세금이 부과되나요?",
+        ]
+        for question in questions:
+            hits = retrieve_document_hits(question, "institution")
+            self.assertTrue(hits, question)
+            self.assertIn("기타소득세", hits[0].get("text", ""), question)
+
+    @unittest.expectedFailure
+    def test_early_termination_tax_without_jungdo_is_a_known_gap(self):
+        """"중도" 없이 "해지 시"만 쓰면 행위어 목록의 "중도해지"와 글자가
+        안 겹쳐서 아직 못 잡는다 - 알려진 한계로 남겨 둔다(동의어 처리를
+        넣으면 이 테스트가 통과로 바뀌어야 하고, 그때 xfail 표시를
+        지운다). 이 테스트가 실패(expected)하는 동안은 회귀가 아니다."""
+        hits = retrieve_document_hits("연금저축 해지 시 세금이 부과되나요?", "institution")
+        self.assertIn("기타소득세", hits[0].get("text", ""))
+
+    @unittest.expectedFailure
+    def test_early_termination_tax_subject_ambiguity_is_a_known_gap(self):
+        """"연금저축"(세제적격 연금저축)과 "개인연금저축"(다른 상품)이
+        둘 다 "중도해지"+과세를 다루는 페이지가 있어서, 표현에 따라
+        가끔 다른 상품 얘기로 새간다("연금저축 중도해지 시 과세는?" 실측
+        - 개인연금저축의 이자소득 비과세 조항으로 감. 정답은 아니지만
+        완전히 무관하지도 않다) - 짧은 접미사 정규화로는 못 가리는
+        subject 층위 모호함이라 알려진 한계로 남겨 둔다."""
+        hits = retrieve_document_hits("연금저축 중도해지 시 과세는?", "institution")
+        self.assertIn("기타소득세", hits[0].get("text", ""))
 
 
 if __name__ == "__main__":
