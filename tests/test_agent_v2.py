@@ -831,5 +831,53 @@ class SimpleDocumentTests(unittest.TestCase):
         self.assertIn("기타소득세", hits[0].get("text", ""))
 
 
+class RagConditionsAnswerTests(unittest.TestCase):
+    """api.server의 레거시 rag 경로(scripts.router.route_search +
+    generate_answer)가 "어떤 경우에 가능한가" 류 질문에서 사유 목록을
+    끝까지 뽑아내는지 확인한다. document_path 쪽과는 별개 코드 경로라
+    tests/test_agent_v2.py의 다른 SimpleDocumentTests와는 분리해 둔다."""
+
+    def setUp(self):
+        self.generate_patcher = patch("answer_llm.generate", return_value=(None, "테스트에서 LLM 호출 생략"))
+        self.generate_patcher.start()
+
+    def tearDown(self):
+        self.generate_patcher.stop()
+
+    _REASON_GROUPS = [
+        ["무주택", "주택구입", "전세보증금", "임차보증금"],
+        ["요양", "의료비"],
+        ["파산", "개인회생", "재난", "담보대출"],
+    ]
+
+    def test_early_withdrawal_conditions_lists_multiple_reasons(self):
+        """실측(INST-06): must=["중도인출"] 한 단어만 보면 "IRP로 입금할 수
+        있나요? 네, 가능합니다"처럼 실제 사유가 하나도 없는 답도 통과했다.
+        대표 사유 범주(주택/요양/파산 계열)가 실제로 답변에 나오는지
+        확인한다."""
+        from api.server import answer_payload
+
+        payload = answer_payload("Q", "퇴직연금 중도인출은 어떤 경우에 가능한가요?")
+        answer = payload.get("answer", "")
+        for group in self._REASON_GROUPS:
+            self.assertTrue(
+                any(term in answer for term in group),
+                f"답변에 {group} 중 어느 것도 없음: {answer!r}",
+            )
+
+    @unittest.expectedFailure
+    def test_early_withdrawal_conditions_rewording_is_a_known_gap(self):
+        """"어떤 경우에 가능한가요"를 "사유가 뭐가 있나요"로만 바꿔도
+        검색 자체가 doc13(제도 변경 안내, 무관)로 새어 버린다 - 이건
+        발췌 선택이 아니라 이 표현에서의 검색 순위 문제라 알려진 한계로
+        남겨 둔다."""
+        from api.server import answer_payload
+
+        payload = answer_payload("Q", "퇴직연금 중도인출 사유가 뭐가 있나요?")
+        answer = payload.get("answer", "")
+        for group in self._REASON_GROUPS:
+            self.assertTrue(any(term in answer for term in group))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -170,8 +170,25 @@ def check(case, payload):
         if s in answer_text:
             fails.append(f"'{s}' 있으면 안 됨")
 
-    answer_pass = not missing_in_answer and not any(
-        s in answer_text for s in case.get("must_not", []))
+    # must_answer 한 단어만 있으면 "정답 단어가 어쩌다 들어간 딴 얘기"도
+    # 통과한다 - 실측(INST-06): "중도인출"이 답에 있기만 하면 통과였는데,
+    # "IRP로 입금할 수 있나요? 네, 가능합니다"처럼 질문이 실제로 물은
+    # 여러 사유(주택구입/전세보증금/요양/파산 등) 중 아무것도 없어도
+    # 통과해 버렸다. must_any_groups는 "이 항목들 중 하나는 있어야
+    # 한다"는 그룹을 여러 개 두고, 그룹을 전부 만족해야 통과시킨다 -
+    # 그룹마다 그 범주의 동의어 몇 개를 두므로(예: 무주택/주택구입/
+    # 전세보증금) 표현이 조금 달라도 오탐하지 않는다.
+    missing_groups = [
+        group for group in case.get("must_any_groups", [])
+        if not any(_answer_contains(answer_text, s) for s in group)
+    ]
+    for group in missing_groups:
+        fails.append(f"{group} 중 어느 것도 답변에 없음")
+
+    answer_pass = (
+        not missing_in_answer and not missing_groups
+        and not any(s in answer_text for s in case.get("must_not", []))
+    )
 
     expected_evidence = case.get("expected_evidence")
     retrieval_pass = citation_pass = None
