@@ -6,6 +6,41 @@ from .product_resolver import resolve_product
 from .schemas import Evidence, PlanStep, QueryFilter, ToolExecutionResult
 
 
+# 제도 문서 검색은 후보 점수가 거의 평평해서(실측 상위 8건이 0.0164~0.0154)
+# 3건으로 자르면 순위 노이즈로 정답이 잘려 나간다. "연금저축과 IRP 세액공제
+# 한도"의 정답 문장이 7위라 버려졌고, LLM은 근거가 없으니 600+900=1,500만원
+# 이라고 잘못 더했다. 상품 문서는 상품마다 따로 검색해 이미 여러 건이 쌓이므로
+# 그대로 둔다. 넘치는 분량은 context_builder가 예산 안에서 정리한다.
+INSTITUTION_HITS = 8
+PRODUCT_HITS = 3
+
+
+def _institution_fact_evidence(question):
+    """제도·세제 수치는 institution_facts에 원자적 사실로 정리돼 있는데도
+    RAG 문서 검색만 하고 있었다. 그래서 "연금저축과 IRP 세액공제 얼마까지"에
+    LLM이 근거를 못 찾고 납입한도(1,800만원)를 세액공제 한도로 잘못 답했다.
+    확정된 사실을 검색 결과와 함께 건네 LLM이 추측할 이유를 없앤다."""
+    from scripts import institution_facts
+    summary, facts = institution_facts.institution_facts_answer(question)
+    if not summary or not facts:
+        return []
+    seen, evidence = set(), []
+    for fact in facts:
+        key = (fact.get("source_doc"), fact.get("page"), fact.get("evidence"))
+        if key in seen:
+            continue
+        seen.add(key)
+        evidence.append(Evidence(
+            evidence_id=f"FACT-{len(evidence) + 1}", kind="structured",
+            content=f"{fact.get('subject')} {fact.get('predicate')}: {fact.get('evidence')}",
+            source=str(fact.get("source_doc")),
+            page=int(fact["page"]) if fact.get("page") is not None else None,
+            data={"verified": True, "subject": fact.get("subject"),
+                  "predicate": fact.get("predicate"), "source": "institution_facts"},
+        ))
+    return evidence
+
+
 def execute_tasks(question, plan):
     results, evidence, errors, states = {}, [], [], {}
     codes = list(plan.entities.get("anchor_product_codes") or [])
@@ -56,9 +91,12 @@ def execute_tasks(question, plan):
                     if source == "product":
                         if not scoped_codes: raise ValueError("상품 RAG는 먼저 상품코드를 확정해야 함")
                         for code in scoped_codes:
-                            hits.extend(retrieve_document_hits(query, "product", code, k=3, fact_types=facts))
+                            hits.extend(retrieve_document_hits(
+                                query, "product", code, k=PRODUCT_HITS, fact_types=facts))
                     elif source == "institution":
-                        hits.extend(retrieve_document_hits(query, "institution", k=3, fact_types=facts))
+                        evs.extend(_institution_fact_evidence(question))
+                        hits.extend(retrieve_document_hits(
+                            query, "institution", k=INSTITUTION_HITS, fact_types=facts))
                     else: raise ValueError("RAG source는 product/institution만 허용")
                 seen = set()
                 for hit in hits:

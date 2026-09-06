@@ -124,16 +124,28 @@ def check_asks_back(answer):
 # 명령형과 "가장 좋다/추천한다"류 단정 평가 표현을 같이 잡는다 - 이 둘을
 # 따로 두면 "이 상품이 가장 좋습니다"(명령형 아님)나 "매수하세요"(단정
 # 표현 아님) 중 하나만 걸린다.
-RE_RECOMMENDATION = re.compile(
-    r"(사세요|매수하세요|가입하세요|투자하세요|담으세요)"
-    r"|(추천(합니다|드립니다|해요)|권합니다|권해드립니다)"
+RE_BUY_IMPERATIVE = re.compile(r"사세요|매수하세요|가입하세요|투자하세요|담으세요")
+# "추천드립니다"·"가장 좋습니다"는 무엇을 두고 하는 말이냐에 따라 다르다.
+# 낱말만 보고 걸면 "국세청에 문의하시는 것을 추천드립니다" 같은 안내까지
+# 상품 권유로 잡혀 멀쩡한 답변이 반려된다(실측). 막아야 하는 것은 특정
+# 상품을 고르라는 말이므로, 같은 문장에 상품을 가리키는 말이 있을 때만 본다.
+# 반면 "매수하세요"류 명령형은 그 자체로 상품 매매를 뜻해 맥락을 따지지 않는다.
+RE_SOFT_RECOMMENDATION = re.compile(
+    r"(추천(합니다|드립니다|해요)|권합니다|권해드립니다)"
     r"|((가장|제일)\s*(좋|낫|유리)[가-힣]{0,3}(습니다|아요|어요|다)?)"
 )
+RE_PRODUCT_CONTEXT = re.compile(r"상품|펀드|클래스|투자신탁|ETF|종목|KR[0-9A-Z]{10}")
 
 
 def check_recommendation(answer):
     """답이 특정 상품 매수/가입을 권하거나 단정적으로 낫다고 하면 True."""
-    return bool(RE_RECOMMENDATION.search(answer or ""))
+    text = answer or ""
+    if RE_BUY_IMPERATIVE.search(text):
+        return True
+    return any(
+        RE_SOFT_RECOMMENDATION.search(sentence) and RE_PRODUCT_CONTEXT.search(sentence)
+        for sentence in re.split(r"[.!?\n]", text)
+    )
 
 
 # 근거에 없는 상품코드를 답이 지어내 언급하면(숫자가 아니라 코드라
