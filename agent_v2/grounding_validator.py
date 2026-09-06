@@ -42,6 +42,16 @@ RE_NO_RESULTS = re.compile(r"찾을\s*수\s*없|해당\s*(?:상품|펀드).{0,10
 RE_UNSUPPORTED_SCOPE = re.compile(r"일반\s*가입\s*기준|대표\s*클래스|기본\s*클래스|통상적인\s*조건")
 
 
+# 답변을 폐기시킬 수 있는 검사와, 보완만 시키면 되는 검사를 나눈다.
+# "요구사항 충족"은 질문에서 뽑은 낱말이 답에 나오는지 보는 얕은 휴리스틱이라
+# 오탐이 잦은데(실측: "퇴직금이 정해지는"의 "해지"가 환매 요구로 잡혀 제도
+# 질문이 영영 반려됐다), 이 하나로 답변 전체를 버리면 질문의 일부를 빠뜨린
+# 답변 대신 아무것도 답하지 않는 거절이 나간다 - 후자가 훨씬 나쁘다.
+# 그래서 재생성은 시키되, 마지막에 이것만 남으면 답변을 그대로 내보낸다.
+# 근거·수치·안전 관련 검사는 여기 넣지 않는다(할루시네이션은 반드시 막는다).
+ADVISORY_CRITERIA = frozenset({"요구사항 충족"})
+
+
 def _error(criterion: str, problem: str, correction: str,
            evidence_id: str | None = None) -> ValidationErrorItem:
     return ValidationErrorItem(

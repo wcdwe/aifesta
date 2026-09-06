@@ -237,6 +237,32 @@ class PipelineContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             QueryFilter(field="risk_level", operator="gte", value="NaN", source_text="q")
 
+    def _gate_with_persistent(self, errors):
+        ev = Evidence(evidence_id="D", kind="document", content="근거", source="d.pdf", page=1)
+        ctx = build_context(QueryPlan(), ToolExecutionResult(status="PASS", evidence=[ev]))
+        failure = ValidationResult(status="FAIL", retry_action="REGENERATE", errors=errors)
+        with patch("agent_v2.validation_gate.validate_grounding", return_value=failure):
+            return run_validation_gate(
+                "질문", "생성된 답변", QueryPlan(), [ev], ctx,
+                llm_validator=lambda *a: ValidationResult(status="PASS", retry_action="NONE"),
+                repair_handler=lambda *a, **k: RepairResult("생성된 답변", [ev], ctx))
+
+    def test_advisory_only_findings_do_not_discard_the_answer(self):
+        # 얕은 휴리스틱(요구사항 충족) 하나로 답변 전체를 버리면, 질문의
+        # 일부를 덜 다룬 답변 대신 아무것도 답하지 않는 거절이 나간다.
+        result = self._gate_with_persistent([{
+            "criterion": "요구사항 충족", "problem": "항목 미반영", "correction": "보강"}])
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.answer, "생성된 답변")
+        self.assertFalse(result.used_safe_fallback)
+
+    def test_grounding_findings_still_discard_the_answer(self):
+        result = self._gate_with_persistent([
+            {"criterion": "요구사항 충족", "problem": "항목 미반영", "correction": "보강"},
+            {"criterion": "근거 기반 답변", "problem": "근거 없이 단정", "correction": "삭제"}])
+        self.assertEqual(result.status, "SAFE_FALLBACK")
+        self.assertTrue(result.used_safe_fallback)
+
     def test_become_verb_is_not_read_as_contract_termination(self):
         # "~해지다"(정해지다·가능해지다)는 "~하게 되다"라는 흔한 구문이지
         # 계약 해지가 아니다. 이걸 환매 질문으로 분류하면 제도 질문에 환매

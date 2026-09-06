@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Callable
-from .grounding_validator import validate_grounding
+from .grounding_validator import ADVISORY_CRITERIA, validate_grounding
 from .pre_router import assess_risk
 from .schemas import ContextBundle, Evidence, QueryPlan, RiskDecision, ValidationResult
 from .validator_llm import validate_with_llm
@@ -115,5 +115,16 @@ def run_validation_gate(question, answer, plan, evidence, context, *,
             history.append({"stage": "repair", "attempt": 1, "status": "UNAVAILABLE"})
             break
         current_answer, current_evidence, current_context = repaired.answer, repaired.evidence, repaired.context
+
+    # 재생성 기회를 다 썼는데 보완용 지적만 남았다면, 그것 때문에 답변을
+    # 버리지 않는다. 질문의 일부를 덜 다룬 답변이, 아무것도 답하지 않는
+    # 거절보다 낫다. 근거·수치·안전 지적이 하나라도 남아 있으면 여기 오지
+    # 않고 아래 SAFE_FALLBACK으로 간다.
+    unresolved = (llm_result or py_result).errors
+    if unresolved and all(item.criterion in ADVISORY_CRITERIA for item in unresolved):
+        history.append({"stage": "advisory_only", "attempt": retry_count,
+                        "criteria": sorted({item.criterion for item in unresolved})})
+        return GateOutcome(current_answer, "PASS", risk, current_evidence,
+            current_context, py_result, llm_result, retry_count, False, tuple(history))
     return GateOutcome(safe_answer(current_evidence), "SAFE_FALLBACK", risk,
         current_evidence, current_context, py_result, llm_result, retry_count, True, tuple(history))
