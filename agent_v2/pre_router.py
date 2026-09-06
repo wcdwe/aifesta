@@ -73,7 +73,8 @@ def pre_route(question: str) -> PreRouteDecision:
 
 def assess_risk(intents: list[str], safety_flags: list[str], answer_source: str) -> RiskDecision:
     reasons = []
-    if set(intents) & {"추천", "세제계산"}:
+    normalized_intents = {item.replace(" ", "").lower() for item in intents}
+    if any("추천" in item or "세제" in item or "tax" in item for item in normalized_intents):
         reasons.append("고위험 의도")
     if set(safety_flags) & {
         "principal_guarantee", "loss_intolerance", "guaranteed_return",

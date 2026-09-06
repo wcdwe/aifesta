@@ -13,6 +13,8 @@ from agent_v2.executor import execute_plan
 from agent_v2.context_builder import build_context
 from agent_v2.grounding_validator import validate_grounding
 from agent_v2.schemas import ContextBundle, Evidence, QueryPlan, ValidationResult
+from agent_v2.validation_gate import RepairResult, run_validation_gate
+from agent_v2.validator_llm import parse_validation
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
 
@@ -186,6 +188,103 @@ class GroundingValidatorTests(unittest.TestCase):
         )
         self.assertEqual(result.status, "FAIL")
         self.assertTrue(any("위험등급 숫자" in e.problem for e in result.errors))
+
+
+class ValidationGateTests(unittest.TestCase):
+    def setUp(self):
+        self.evidence = [Evidence(
+            evidence_id="E1", kind="structured", content="위험등급은 3등급입니다.",
+            source="product_master",
+        )]
+        self.context = ContextBundle(text=self.evidence[0].content, evidence_ids=["E1"])
+
+    @staticmethod
+    def _pass_validator(*_args):
+        return ValidationResult(status="PASS", retry_action="NONE", errors=[])
+
+    @staticmethod
+    def _fail_validator(*_args):
+        return ValidationResult(
+            status="FAIL", retry_action="REGENERATE",
+            errors=[{"criterion": "안전성", "problem": "오류", "correction": "수정"}],
+        )
+
+    def test_low_risk_pass_skips_llm_validator(self):
+        calls = []
+        outcome = run_validation_gate(
+            "위험등급 알려줘", "위험등급은 3등급입니다.",
+            QueryPlan(intents=["상품설명"]), self.evidence, self.context,
+            llm_validator=lambda *_args: calls.append(True),
+        )
+        self.assertEqual(outcome.status, "PASS")
+        self.assertEqual(calls, [])
+
+    def test_high_risk_pass_requires_llm_validator(self):
+        calls = []
+
+        def validator(*_args):
+            calls.append(True)
+            return self._pass_validator()
+
+        outcome = run_validation_gate(
+            "추천해줘", "위험등급은 3등급입니다.",
+            QueryPlan(intents=["조건부추천"]), self.evidence, self.context,
+            llm_validator=validator,
+        )
+        self.assertEqual(outcome.status, "PASS")
+        self.assertEqual(len(calls), 1)
+
+    def test_python_failure_is_not_overridden_by_llm(self):
+        calls = []
+        outcome = run_validation_gate(
+            "위험등급 알려줘", "위험등급은 2등급입니다.",
+            QueryPlan(intents=["상품설명"]), self.evidence, self.context,
+            llm_validator=lambda *_args: calls.append(True),
+        )
+        self.assertEqual(outcome.status, "SAFE_FALLBACK")
+        self.assertEqual(calls, [])
+
+    def test_llm_failure_repairs_once_and_revalidates(self):
+        calls = []
+
+        def validator(*_args):
+            calls.append(True)
+            return self._fail_validator() if len(calls) == 1 else self._pass_validator()
+
+        repairs = []
+
+        def repair(action, _errors):
+            repairs.append(action)
+            return RepairResult("위험등급은 3등급입니다.", self.evidence, self.context)
+
+        outcome = run_validation_gate(
+            "추천해줘", "위험등급은 3등급입니다.",
+            QueryPlan(intents=["추천"]), self.evidence, self.context,
+            repair_handler=repair, llm_validator=validator,
+        )
+        self.assertEqual(outcome.status, "PASS")
+        self.assertEqual(outcome.retry_count, 1)
+        self.assertEqual(len(repairs), 1)
+        self.assertEqual(len(calls), 2)
+
+    def test_repeated_validator_failure_uses_safe_answer(self):
+        outcome = run_validation_gate(
+            "추천해줘", "위험등급은 3등급입니다.",
+            QueryPlan(intents=["추천"]), self.evidence, self.context,
+            repair_handler=lambda *_args: RepairResult(
+                "위험등급은 3등급입니다.", self.evidence, self.context
+            ),
+            llm_validator=self._fail_validator,
+        )
+        self.assertEqual(outcome.status, "SAFE_FALLBACK")
+        self.assertEqual(outcome.retry_count, 1)
+        self.assertTrue(outcome.used_safe_fallback)
+        self.assertIn("검증을 통과한 범위", outcome.answer)
+
+    def test_invalid_validator_json_fails_closed(self):
+        result = parse_validation("PASS")
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(result.retry_action, "SAFE_FALLBACK")
 
 
 class QueryAnalyzerTests(unittest.TestCase):
