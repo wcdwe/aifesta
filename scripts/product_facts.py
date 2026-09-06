@@ -14,7 +14,6 @@
 
 import json
 import os
-import re
 import sqlite3
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -128,17 +127,29 @@ INTENT_KEYWORDS = {
 # 된다. 실측: "퇴직금이 정해지는 방식"이 환매(redemption) 질문으로 분류돼,
 # 제도 질문에 환매 설명이 없다는 이유로 답변이 계속 반려됐다.
 #
-# 처음엔 뒤에 오는 어미(-는/-다/-면...)를 열거해 걸렀는데, 어미는 열린
-# 집합이라 넣어도 끝이 없었다("정해지나요"의 -나에서 또 샜다). 그래서 조건을
-# 뒤집는다: 앞에 한글이 붙은 "해지"는 기본적으로 이 동사 구문으로 보고,
-# 진짜 해지를 뜻하는 복합어만 예외로 둔다. 복합어는 도메인 용어라 닫힌
-# 집합이고 여기서 열거가 끝난다. 앞이 공백·문장 시작이면("펀드를 해지하면")
-# 애초에 이 규칙에 걸리지 않는다.
-_TERMINATION_COMPOUNDS = ("중도", "계약", "만기", "조기", "일부", "부분", "전액")
-_VERB_BECOME_RE = re.compile(
-    r"(?<=[가-힣])"
-    + "".join(f"(?<!{word})" for word in _TERMINATION_COMPOUNDS)
-    + r"해지")
+# 처음엔 정규식으로 걸렀다 - 뒤에 오는 어미(-는/-다/-면...)를 열거했더니
+# 어미는 열린 집합이라 넣어도 끝이 없었고("정해지나요"의 -나에서 또 샜다),
+# 조건을 뒤집어 진짜 해지를 뜻하는 복합어만 예외로 둬도 그 목록이 계속
+# 자랄 수밖에 없었다. 낱말 매칭으로는 문법을 흉내만 낼 뿐이라 근본적인
+# 한계가 있다. 형태소 분석(Kiwi)으로 "해지"가 명사인지(계약을 해지하다)
+# 동사 활용의 일부인지(정해지다) 직접 판별한다 - 문법 정보가 있으면
+# 목록을 넓힐 필요가 없다.
+_kiwi = None
+
+
+def _get_kiwi():
+    global _kiwi
+    if _kiwi is None:
+        from kiwipiepy import Kiwi
+        _kiwi = Kiwi()
+    return _kiwi
+
+
+def _has_termination_noun(question: str) -> bool:
+    return any(
+        token.form == "해지" and token.tag.startswith("N")
+        for token in _get_kiwi().tokenize(question or "")
+    )
 
 
 def detect_intents(question):
@@ -154,12 +165,21 @@ def detect_intents(question):
     넘긴다. product_facts() 자신은 intents가 비어 오면 여전히 fee+return을
     기본값으로 쓴다(CLI로 이 모듈만 단독 호출할 때의 편의 기본값) - 그건
     이 함수가 아니라 product_facts()의 몫이라 그대로 둔다."""
-    # 낱말 경계는 띄어쓰기를 지우기 "전"에 봐야 한다. 먼저 지우면 "중간에
-    # 해지하면"이 "중간에해지하면"이 되어 앞 글자가 한글로 보이고, 진짜 해지가
-    # 동사 구문으로 오인된다.
-    q = _VERB_BECOME_RE.sub("\x00", question or "").replace(" ", "")
-    return [k for k, kws in INTENT_KEYWORDS.items()
-            if any(w.replace(" ", "") in q for w in kws)]
+    q = (question or "").replace(" ", "")
+    intents = []
+    for key, keywords in INTENT_KEYWORDS.items():
+        matched = [w for w in keywords if w.replace(" ", "") in q]
+        if not matched:
+            continue
+        if key == "redemption" and matched == ["해지"]:
+            # "해지"만 유일하게 걸렸을 때만 형태소로 확인한다. 환매/중도해지/
+            # 팔면/빼면/인출 등 다른 명시적 키워드가 이미 함께 걸렸다면
+            # ("중도해지"는 "해지"도 부분문자열로 함께 매칭된다) 의심의
+            # 여지가 없으므로 형태소 분석을 건너뛴다.
+            if not _has_termination_noun(question):
+                continue
+        intents.append(key)
+    return intents
 
 
 def _classes_for(conn, code, class_code=None):

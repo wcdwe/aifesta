@@ -10,6 +10,11 @@ requests
 fastapi
 uvicorn
 
+# 낱말 부분일치만으로는 문법을 못 구별한다("정해지다"의 활용형 "해지"를
+# 계약 해지 명사와 못 나눔 - product_facts.detect_intents 참고). 순수
+# Python 확장이라 별도 바이너리 설치 없이 pip만으로 된다.
+kiwipiepy
+
 # sentence-transformers는 로컬 임베딩 모델(LocalEmbeddingProvider,
 # EMBEDDING_PROVIDER=sentence_transformers)에서만 필요하다. 개발 환경에서는
 # huggingface.co 접근이 막혀 있어 검증하지 못했으니, 접근 가능한 환경에서만
