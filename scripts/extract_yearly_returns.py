@@ -149,13 +149,30 @@ def _suffix_class_code(flat, known_codes):
     "...투자신탁[채권]Class C-P(연금)", "...자투자신탁 A" - 표기가
     "종류"/"Class"/"펀드Class"/맨살 등 제각각이라 접두사를 일일이 나열하는
     대신, 아는 코드가 박혀 있는지만 본다). known_codes 중 가장 긴 것부터
-    맞춰야 "S"가 "S-P"보다 먼저 걸려 잘못 짧게 끊기지 않는다."""
+    맞춰야 "S"가 "S-P"보다 먼저 걸려 잘못 짧게 끊기지 않는다.
+
+    뒤끝(오른쪽) 경계만 보고 왼쪽은 안 보면, 클래스 코드가 아예 안 박혀
+    있는 라벨인데 우연히 끝 글자만 코드와 같아도 걸린다(실측:
+    KR5194450018 51쪽 자산구성표의 통화 라벨 "KRW"가 클래스 "W"의
+    접미사로 잘못 걸려, 그 옆 순수 자산총액 숫자 행이 "W"클래스의
+    연도별 수익률 행으로 둔갑했다 - 원문 어디에도 이 문서의 "W"클래스
+    연도별 수익률은 없다). 왼쪽 경계도 함께 본다: 코드 바로 앞이
+    (1) 문자열 시작이거나 (2) 영숫자가 아니거나(공백/괄호 등) (3)
+    "class"(대소문자 무관)로 끝나거나(위 "펀드ClassA2") (4) "종류"로
+    끝날 때만("종류A"처럼 붙여 쓰는 문서) 진짜 클래스 코드로 본다 -
+    "KR" 같은 임의의 영문 접두사 뒤에 붙은 우연의 일치는 전부 걸러진다."""
     for code in sorted(known_codes, key=len, reverse=True):
         if not code:
             continue
         pattern = re.escape(code) + rf"(?:$|(?![A-Za-z0-9])|(?={RE_DATE_TOKEN}))"
-        if re.search(pattern, flat):
-            return code
+        for m in re.finditer(pattern, flat):
+            start = m.start()
+            prev = flat[start - 1] if start > 0 else ""
+            before = flat[:start]
+            if (not prev or not prev.isalnum()
+                    or before.lower().endswith("class")
+                    or before.endswith("종류")):
+                return code
     return None
 
 
@@ -1174,6 +1191,39 @@ def apply_known_period_fixes(rows):
     return fixed
 
 
+# "나. 연도별 수익률 추이" 표가 페이지 경계(55→56쪽)에서 갈리면서,
+# 신설 클래스 2개의 2년차 행이 통째로 안 잡혔다(KR5144420020 실측:
+# 56쪽 맨 위, 55쪽 표 바로 이어지는 자리에 "수수료미징구-오프라인-
+# 퇴직연금(고액)(C-P2I(퇴직연금)) 4.21 8.38 - - -"와 "수수료선취-
+# 오프라인(A2) 4.26 7.73 - - -" 두 줄이 있는데, 표·좌표 두 경로 다
+# 1년차(4.21/4.26)만 건지고 2년차(8.38/7.73)는 놓쳤다 - 3~5년차는
+# 원문에도 "-"라 정상적으로 행을 안 만드는 게 맞다). 페이지 자체는
+# 이미 56으로 맞게 잡혀 있었다(56쪽 위쪽이 이 표의 계속이고, 그
+# 아래에서야 "다. 집합투자기구의 자산 구성 현황" 절이 시작된다 -
+# 애초에 페이지가 틀렸다고 오판했던 적이 있었는데, 원문을 다시 보니
+# 페이지는 처음부터 맞았고 2년차 행 자체가 빠진 것이었다).
+_KNOWN_MISSING_ROWS = [
+    {"row_kind": "class_return", "class_code": "C-P2I(퇴직연금)", "year_rank": 2,
+     "period": "23.09.02~24.09.01", "return_pct": 8.38,
+     "product_code": "KR5144420020", "page": 56},
+    {"row_kind": "class_return", "class_code": "A2", "year_rank": 2,
+     "period": "23.09.02~24.09.01", "return_pct": 7.73,
+     "product_code": "KR5144420020", "page": 56},
+]
+
+
+def add_known_missing_rows(rows):
+    existing = {(r["product_code"], r["row_kind"], r.get("class_code"), r["year_rank"])
+                for r in rows}
+    added = 0
+    for row in _KNOWN_MISSING_ROWS:
+        key = (row["product_code"], row["row_kind"], row.get("class_code"), row["year_rank"])
+        if key not in existing:
+            rows.append(dict(row))
+            added += 1
+    return added
+
+
 def report(rows):
     prods = {r["product_code"] for r in rows}
     kinds = {}
@@ -1199,6 +1249,7 @@ def main():
     rows = extract(args.db)
     apply_known_class_code_renames(rows)
     apply_known_period_fixes(rows)
+    add_known_missing_rows(rows)
     remove_known_fake_rows(rows)
     report(rows)
     if args.check:

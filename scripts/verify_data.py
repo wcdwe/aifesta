@@ -578,6 +578,31 @@ def check_returns_range(conn, rep):
     rep.add("수익률이 -100% ~ 500% 밖", len(bad), total, bad)
 
 
+CAREER_MONTHS_RE = re.compile(r"^\d{1,3}(?:\.\d{1,2})?년\s*(\d{1,2})개월$")
+
+
+def check_manager_career_format(conn, rep):
+    """경력이 "N년 M개월"인데 M이 11을 넘나(불가능한 나머지 개월).
+
+    "년"과 "개월"을 서로 다른 두 컬럼(예: 경력년수 vs ESG 경력년수)에서
+    따로 읽어 잘못 이어붙이면 이런 값이 나온다(실측: KR5113420069
+    홍다정 "6년 45개월" - 원문 15쪽은 "운용경력년수(6년 5개월)"와
+    "ESG 운용경력년수(4년 9개월)"가 나란한 두 칸인데, 앞 칸의 "6년"
+    뒤에 옆 칸 "4년"의 "4"가 개월 표시 없이 붙었다가, "개월"이
+    없다고 판단한 보정 로직이 뒤 줄의 "5개월"을 마저 이어붙여 만들어진
+    값이었다 - 원문 정답은 "6년 5개월". scripts/extract_manager_info.py의
+    CAREER_RE를 고쳐 재발은 막았지만, 다른 문서에서 같은 층위 버그가
+    또 생기면 이 검사로 잡는다)."""
+    bad, total = [], 0
+    for r in _rows(conn, "SELECT * FROM manager_info WHERE career IS NOT NULL"):
+        total += 1
+        m = CAREER_MONTHS_RE.match(r["career"])
+        if m and int(m.group(1)) > 11:
+            bad.append(f"{r['product_code']} {r['name']} career={r['career']!r}")
+    rep.add("manager_info.career의 '개월'이 11 초과(불가능한 나머지)",
+            len(bad), total, bad)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default=DEFAULT_DB_PATH)
@@ -597,7 +622,7 @@ def main():
                check_source_conflicts, check_asset_mix,
                check_as_of, check_trade_rules,
                check_yearly_periods, check_class_return_has_code,
-               check_returns_range):
+               check_returns_range, check_manager_career_format):
         fn(conn, rep)
     conn.close()
 

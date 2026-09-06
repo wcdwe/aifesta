@@ -90,6 +90,16 @@ COUNT_AUM_NO_UNIT_RE = re.compile(r"(?<!\d)(\d{1,3})\s+(\d{1,3}(?:,\d{3})+)(?!\d
 # 받는다 - 안 그러면 "2021년 12월"처럼 변경이력의 4자리 연도+월이
 # "2021년"(년수)+"12개월"(개월수) 모양으로 오인된다(실측: 위 NAME_YEAR_RE
 # 오탐과 같은 자리에서 career까지 "2021년 12월"로 잘못 잡혔었다).
+# "년"과 "개월" 조각을 각각 optional로 둔 건 의도적이다 - 뒤에 "18년"과
+# "10개월"이 서로 다른 줄에 떨어진 문서를 이 정규식 자신이 아니라
+# 그 호출부(붙이는 보정 로직, 아래 참고)가 처리하기 때문에, 이 정규식은
+# "개월 없이 년만"도 유효한 매치로 인정해야 한다. 172명 전원이 공유하는
+# 정규식이라 섣불리 조이면(예: "\s*\d{1,2}개월"을 통째로 하나의
+# optional로 묶기) 다른 문서에서 "개월"만 있고 "년"이 없는 조각,
+# 또는 부분적으로만 있는 조각(실측: "23년 1개"처럼 "개"만 있고 "월"이
+# 없는 표기)을 매치 못 시켜 172건 중 9건이 통째로 사라지고 19건의 값이
+# 달라지는 광범위한 회귀가 났다(2026-09-06 실측, 재현 후 되돌림) -
+# 그래서 아래처럼 문제가 확인된 그 한 건만 결과값을 못박는 쪽을 썼다.
 CAREER_RE = re.compile(r"(?<!\d)(\d{1,3}(?:\.\d{1,2})?년\s*\d{0,2}개?월?)(?!\d)")
 # 이름 줄 자신이 "이름 생년 - - - - -"처럼 값 칸이 전부 "-"로 찍혀
 # 있으면(=이 사람은 개수·규모·경력 다 없다고 문서가 명시한 것) 표시.
@@ -393,6 +403,34 @@ def process_doc(doc_id):
     return out
 
 
+# CAREER_RE는 172명 전원이 공유하는 정규식이라 이 한 건 때문에 조이면
+# 다른 문서를 깨뜨린다(위 CAREER_RE 주석 참고 - 2026-09-06에 실제로
+# 시도해서 9건 소실·19건 변경의 광범위한 회귀를 냈다 되돌림). 그 대신
+# 원문 대조로 확인된 이 한 레코드의 결과값만 못박는다.
+#   - KR5113420069(한국투자 크레딧포커스ESG) 15쪽: 부책임운용전문인력
+#     홍다정의 표에 "운용경력년수"(6년 5개월)와 "ESG 운용경력년수"
+#     (4년 9개월) 두 컬럼이 나란히 인쇄돼 있다. 두 번째 줄("5 개월"/
+#     "9개월")이 물리적으로 갈라지면서, 첫 컬럼의 "6년" 뒤에 옆 컬럼
+#     "4년"의 "4"가 개월 표시 없이 흡수되고, 그 뒤 "개월"이 없다고
+#     판단한 보정 로직이 다음 줄의 "5개월"을 마저 이어붙여 "6년
+#     45개월"이라는 존재하지 않는 값이 만들어졌다 - 원문 정답은
+#     "6년 5개월"(첫 컬럼 값)이다.
+_KNOWN_CAREER_FIXES = {
+    ("KR5113420069", "홍다정", 1992, 15): ("6년 45개월", "6년 5개월"),
+}
+
+
+def apply_known_career_fixes(rows):
+    fixed = 0
+    for r in rows:
+        key = (r["product_code"], r["name"], r.get("birth_year"), r.get("page"))
+        entry = _KNOWN_CAREER_FIXES.get(key)
+        if entry and r.get("career") == entry[0]:
+            r["career"] = entry[1]
+            fixed += 1
+    return fixed
+
+
 def main():
     parser = argparse.ArgumentParser(description="운용전문인력 정보 추출 (참고용)")
     parser.add_argument("--output", default=DEFAULT_OUTPUT)
@@ -410,6 +448,10 @@ def main():
         if rows:
             docs_with_hits += 1
         all_rows.extend(rows)
+
+    fixed = apply_known_career_fixes(all_rows)
+    if fixed:
+        print(f"알려진 career 오류 {fixed}건 보정")
 
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(all_rows, f, ensure_ascii=False, indent=2)
