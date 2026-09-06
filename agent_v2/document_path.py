@@ -105,6 +105,31 @@ def _coverage(hit: dict, question: str) -> int:
     return total
 
 
+def has_action_term_overlap(hit: dict, question: str) -> bool:
+    """질문의 행위어(_ACTION_TERMS)가 hit 본문에 실제로 있는지만 본다.
+
+    _coverage()는 대상·요구정보 낱말까지 다 더하는데, 관련성 "게이트"로
+    쓰기엔 그게 오히려 독이 된다 - "퇴직연금"처럼 이 코퍼스 거의 모든
+    페이지에 나오는 대상어까지 coverage>0을 만들어 버려서, 정작
+    "중도인출"이라는 행위어가 전혀 없는 무관한 페이지도 게이트를
+    통과해 버린다(실측: INST-06, api/server.py의 관련성 게이트에서
+    이 문제로 doc27 p.4가 계속 이겼다). 그래서 게이트 전용으로는
+    행위어 일치 여부만 이진으로 본다."""
+    compact_text = re.sub(r"\s+", "", hit.get("text") or "").lower()
+    tokens = [
+        token.lower() for token in re.findall(r"[가-힣A-Za-z0-9]+", question or "")
+        if len(token) >= 2 and token not in _REQUEST_TERMS
+    ]
+    for token in tokens:
+        forms = {token}
+        norm = _normalized_token(token)
+        if norm:
+            forms.add(norm)
+        if any(form in _ACTION_TERMS and form in compact_text for form in forms):
+            return True
+    return False
+
+
 def _usable(hit: dict) -> bool:
     text = (hit.get("text") or "").strip()
     try:
@@ -187,6 +212,26 @@ def _topic_bonus(question: str, window: str) -> float:
     return 0.0
 
 
+# 질문이 "어떤 경우에 가능한가"류(조건·사유를 묻는 질문)면, 정답은 보통
+# 번호 매긴 목록(사유 1, 2, 3...)이다. 번호 목록이라고 무조건 가산하면
+# 절차 안내나 무관한 목차도 다시 유리해지므로, 질문이 실제로 조건·사유를
+# 묻을 때만, 그리고 그 목록이 여러 항목을 담고 있을 때만 가산한다.
+_CONDITIONS_QUESTION_RE = re.compile(r"어떤\s*경우|어느\s*경우|무슨\s*경우|조건|사유|언제\s*가능")
+_LIST_ITEM_RE = re.compile(r"(?:^|[\s\)\]])\d{1,2}[.)]\s*\S")
+# 이 코퍼스의 FAQ 문서들이 답을 시작할 때 쓰는 표지. 대부분 "▶"를 쓰고
+# (doc27/doc55 등), 일부는 "•"(doc14 계열)나 "☞"(doc9 등)를 쓴다 - 문서
+# 하나에 맞춘 게 아니라 실제로 관찰된 여러 표지를 모은 것이다.
+_ANSWER_MARKER_RE = re.compile(r"[▶☞]|(?:^|\n)\s*•")
+
+
+def _asks_for_conditions(question: str) -> bool:
+    return bool(_CONDITIONS_QUESTION_RE.search(question or ""))
+
+
+def _list_item_count(window: str) -> int:
+    return len(_LIST_ITEM_RE.findall(window))
+
+
 def _split_sentences(text: str) -> list[str]:
     sentences = []
     for line in (text or "").split("\n"):
@@ -208,7 +253,33 @@ def _sentence_windows(text: str, size: int = 3) -> list[str]:
     return [" ".join(sentences[i:i + size]) for i in range(len(sentences))]
 
 
-def _relevant_excerpt(question: str, text: str, max_chars: int) -> str:
+def _extend_list_window(sentences: list[str], start: int, max_chars: int) -> str:
+    """start부터 이어지는 번호 목록 항목을 끝까지(항목이 아닌 문장이
+    두 개 연속 나올 때까지) 모아 붙인다. 고정 문장 개수(3/7문장)로는
+    항목이 몇 개짜리 목록이든 상관없이 일부만 잘려 나가므로("사유
+    7가지 중 2개만" - 실측 INST-06), 목록이 실제로 몇 항목이든 끝까지
+    따라간다."""
+    parts, total, saw_list_item, trailing_non_list = [], 0, False, 0
+    for idx in range(start, len(sentences)):
+        s = sentences[idx]
+        is_list = bool(_LIST_ITEM_RE.search(s))
+        if saw_list_item and not is_list:
+            trailing_non_list += 1
+            if trailing_non_list > 1:
+                break
+        else:
+            trailing_non_list = 0
+        if is_list:
+            saw_list_item = True
+        candidate_total = total + len(s) + 1
+        if parts and candidate_total > max_chars:
+            break
+        parts.append(s)
+        total = candidate_total
+    return " ".join(parts)
+
+
+def relevant_excerpt(question: str, text: str, max_chars: int) -> str:
     """청크에서 질문과 가장 관련 있는 문장 구간을 찾아 그 구간만 자른다.
 
     예전엔 청크 앞부분 max_chars를 그대로 잘랐는데("투자자 유의사항" 같은
@@ -220,23 +291,71 @@ def _relevant_excerpt(question: str, text: str, max_chars: int) -> str:
     text = text or ""
     if len(text) <= max_chars:
         return text
-    windows = _sentence_windows(text, size=3)
-    scored = [
-        (_coverage({"text": w}, question) + _topic_bonus(question, w), i, w)
-        for i, w in enumerate(windows)
-    ]
-    best_score, _, best = max(scored, key=lambda item: (item[0], -item[1]))
+    windows = [(i, w) for i, w in enumerate(_sentence_windows(text, size=3))]
+    asks_conditions = _asks_for_conditions(question)
+    if asks_conditions:
+        # 조건·사유 목록은 보통 한 항목이 한 문장이라, 3문장 구간엔
+        # 기껏해야 항목 1~2개만 걸린다. "몇 가지 조건 중 어떤 것들인가"를
+        # 묻는 질문이면 더 넓은(7문장) 구간도 후보에 얹어서, 항목이
+        # 여러 개 이어지는 구간이 통째로 뽑힐 수 있게 한다(둘 다 같은
+        # 시작 문장 위치를 인덱스로 써서 "원래 순서" 우선순위가 흐트러
+        # 지지 않게 한다).
+        windows += [(i, w) for i, w in enumerate(_sentence_windows(text, size=7))]
+
+    # 실측(INST-06): "퇴직연금 중도인출은 어떤 경우에 가능한가요?"에서
+    # "중도인출"이 두 군데(진짜 사유 목록 직전, 그리고 전혀 다른 질문
+    # 끝자락)에 걸려 coverage가 동점이 났는데, 예전 동점 규칙("?"로 안
+    # 끝나면 우선, 그래도 같으면 늦은 구간 우선")이 사유 목록이 아닌
+    # 쪽을 골랐다 - "늦은 구간 우선"은 근거 없는 추측이었다. 대신
+    # 사람이 실제로 쓰는 순서로 동점을 가른다:
+    #   1) 관련성 점수(coverage+화제 가산 - 조건 질문이면 목록 항목
+    #      개수 가산도 여기 포함)
+    #   2) 핵심 행위어가 이 구간에 실제로 있는가
+    #   3) (조건 질문일 때) 목록 항목이 몇 개나 있는가 - 많을수록 우선
+    #   4) 답변 표지(▶·☞·•)가 이 구간 안에 있는가 - "?"로 안 끝나는지를
+    #      봤었는데, "#연금수령" 같은 해시태그 줄이 우연히 물음표 뒤에
+    #      와서 "안 끝남"을 만족시켜 버리는 오탐이 있었다(실측 INST-04
+    #      회귀). 이 코퍼스는 "▶"(대부분) 또는 "•"(doc14 계열)로 답을
+    #      시작하므로, 그 표지가 실제로 있는지를 직접 본다.
+    #   5) 그래도 같으면 문서에 나온 원래 순서(앞선 구간)
+    def _rank(item):
+        i, w = item
+        list_count = _list_item_count(w) if asks_conditions else 0
+        score = _coverage({"text": w}, question) + _topic_bonus(question, w)
+        if asks_conditions and list_count >= 2:
+            score += 6.0
+        return (
+            score,
+            has_action_term_overlap({"text": w}, question),
+            list_count,
+            bool(_ANSWER_MARKER_RE.search(w)),
+            -i,
+        )
+
+    best_i, best = max(windows, key=_rank)
+    ranked_best = _rank((best_i, best))
+    best_score, best_list_count = ranked_best[0], ranked_best[2]
     if best_score <= 0:
         # 관련 신호를 하나도 못 찾았으면(코퍼스 전반에 걸친 일반 질문 등)
         # 예전 동작(앞부분 절단)으로 안전하게 되돌아간다.
         return text[:max_chars] + ("…" if len(text) > max_chars else "")
-    if len(best) > max_chars:
-        return best[:max_chars] + "…"
+    # 조건·사유 목록 질문은 항목 하나만 보여주면 "어떤 경우들"에 대한
+    # 답으로 부족하다(실측: INST-06 - 고정 문장 개수 구간으로는 사유
+    # 7개 중 2~3개만 들어갔다). 목록이 실제로 여러 항목이면, 이 목록이
+    # 끝날 때까지 이어 붙인다(항목 개수에 맞춰 늘어나므로 3개짜리
+    # 목록이든 7개짜리 목록이든 같은 규칙으로 다 붙는다).
+    if asks_conditions and best_list_count >= 2:
+        grown = _extend_list_window(_split_sentences(text), best_i, max_chars * 3)
+        if len(grown) > len(best):
+            best = grown
+    effective_max = max_chars * 3 if (asks_conditions and best_list_count >= 2) else max_chars
+    if len(best) > effective_max:
+        return best[:effective_max] + "…"
     return best
 
 
 def _fallback(hit: dict, question: str = "") -> str:
-    excerpt = _relevant_excerpt(question, hit["text"], 350)
+    excerpt = relevant_excerpt(question, hit["text"], 350)
     return f"검색된 근거({hit['doc_id']} p.{hit['page']})에 따르면:\n{excerpt}"
 
 
@@ -251,7 +370,7 @@ def _procedure_fallback(hits: list[dict], question: str = "") -> str:
         return _fallback(top, question)
     return "\n\n".join(
         f"검색된 근거({hit['doc_id']} p.{hit['page']}):\n"
-        f"{_relevant_excerpt(question, hit['text'], 450)}"
+        f"{relevant_excerpt(question, hit['text'], 450)}"
         for hit in adjacent
     )
 

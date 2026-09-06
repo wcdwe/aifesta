@@ -51,6 +51,8 @@ import product_ranking  # noqa: E402
 import institution_facts  # noqa: E402
 from agent_v2.pre_router import pre_route  # noqa: E402
 from agent_v2.document_path import (  # noqa: E402
+    relevant_excerpt,
+    has_action_term_overlap,
     try_simple_institution_document,
     try_simple_product_document,
 )
@@ -391,6 +393,29 @@ def _best_scored_hit(hits, query, intents, exclude_ids=frozenset()):
             scored.append((s, -rank, h))
     if not scored:
         return None
+
+    # 핵심 행위어 게이트: 문장종결·항목값 같은 구조 가산점은 "질문이
+    # 실제로 묻는 낱말을 담은 문장"을 더 위로 올리기 위한 보정일 뿐인데,
+    # 이 가산점만으로 그 낱말이 아예 없는 문장이 역전하는 사고가 있었다
+    # (실측: "퇴직연금 중도인출은 언제 가능한가"에서 "중도인출"이라는
+    # 글자가 전혀 없는 무관한 FAQ 문항이, 문장종결·항목값·구체수치
+    # 가산점만으로 "중도인출" 사유가 실제로 나열된 정답 문항을 이겼다).
+    # 처음엔 agent_v2.document_path._coverage()(대상·요구정보 낱말까지
+    # 다 더하는 값)로 게이트를 걸었는데, "퇴직연금"처럼 이 코퍼스 거의
+    # 모든 페이지에 나오는 대상어만으로도 coverage>0이 돼서 게이트가
+    # 무력화됐다(실측). 그래서 게이트 전용으로는 행위어(중도인출·이전
+    # 등) 일치만 보는 has_action_term_overlap()을 쓴다 - 이 후보군 안에
+    # 행위어가 겹치는 후보가 하나라도 있으면, 안 겹치는 후보는 구조
+    # 가산점이 아무리 높아도 제외한다. 질문에 인식된 행위어가 없거나
+    # 후보 전체가 하나도 못 담고 있으면(코퍼스 recall 자체의 한계) 게이트를
+    # 걸 근거가 없으므로 그대로 둔다.
+    covered = [
+        (s, rank, h) for s, rank, h in scored
+        if has_action_term_overlap(h, query)
+    ]
+    if covered:
+        scored = covered
+
     scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
     best_score, _, best_hit = scored[0]
     # 부동소수점 오차(0.7-0.25가 정확히 0.45가 아니라 0.44999...로 나오는
@@ -445,11 +470,18 @@ def generate_answer(query: str, route_result: dict):
         return NO_EVIDENCE, "상위 검색 결과 중 관련성 있는 근거를 찾지 못해 정보한계로 답함"
     if len(picked) == 1:
         top = picked[0]
+        # 청크 앞 300자를 그대로 자르면, 실제로 골라 둔 정답 청크라도
+        # 앞부분이 무관한 안내문이면 진짜 답 문장까지 못 간다(INST-05와
+        # 같은 문제가 여기서도 그대로 재현됐다 - 실측 INST-06: doc14 p.2를
+        # 정확히 골랐는데도 앞 300자가 IRP 이체 안내라 "중도인출 사유"
+        # 표는 잘려 나갔다). document_path.relevant_excerpt()로 질문과
+        # 가장 관련 있는 문장 구간만 자른다.
         fallback = (f"검색된 근거({top.get('doc_id')} p.{top.get('page')})에 따르면:\n"
-                    f"{top['text'][:300]}")
+                    f"{relevant_excerpt(query, top['text'], 300)}")
     else:
         # 복합 질문 - 사실별로 고른 청크를 각자 출처를 단 채로 이어붙인다.
-        parts = [f"[{h.get('doc_id')} p.{h.get('page')}] {h['text'][:300]}"
+        parts = [f"[{h.get('doc_id')} p.{h.get('page')}] "
+                 f"{relevant_excerpt(query, h['text'], 300)}"
                  for h in picked]
         fallback = "질문에 필요한 사실을 근거별로 나눠 찾았습니다:\n\n" + "\n\n".join(parts)
     return compose_answer(query, context, fallback)
