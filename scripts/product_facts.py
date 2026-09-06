@@ -97,7 +97,15 @@ INTENT_KEYWORDS = {
     "risk": ("위험등급", "등급"),
     "aum": ("설정액", "순자산", "규모", "자산총액", "얼마나 큰"),
     "cost_projection": ("비용예시", "1,000만원", "1000만원", "천만원", "투자하면"),
-    "redemption": ("환매", "해지", "중도해지", "팔면", "빼면", "인출"),
+    # "해지"는 계좌 해지도 펀드 환매도 가리킬 수 있고 "정해지다"류 동사
+    # 활용과도 글자가 겹쳐, 부분 문자열로는 셋을 구별할 수 없다. 세 가지를
+    # 각자 다른 FactType으로 나눈다 - 펀드 환매수수료 조회(fund_redemption)는
+    # "환매"라는 명확한 전문용어로만 걸고, "해지" 자체는 여기 목록에 넣지
+    # 않는다(detect_intents가 형태소로 직접 판별한다). 주문취소는 anchor.py
+    # 의 제도 라우팅 신호("매수\s*취소")와 같은 어휘를 쓴다.
+    "fund_redemption": ("환매",),
+    "account_termination": ("중도해지", "계약해지", "팔면", "빼면", "인출"),
+    "order_cancellation": ("매수취소", "주문취소"),
     # "몇 시까지 신청하면", "돈 언제 들어와요" 같은 질문
     "timing": ("언제", "며칠", "몇 시", "시까지", "기준가", "지급", "들어와",
                "입금", "영업일", "청구하면", "신청하면"),
@@ -165,20 +173,17 @@ def detect_intents(question):
     넘긴다. product_facts() 자신은 intents가 비어 오면 여전히 fee+return을
     기본값으로 쓴다(CLI로 이 모듈만 단독 호출할 때의 편의 기본값) - 그건
     이 함수가 아니라 product_facts()의 몫이라 그대로 둔다."""
+    # "해지" 낱말은 계좌 해지도, "정해지다"류 동사 활용도 다 가리킬 수 있어
+    # 부분 문자열로는 셋을 구별할 수 없다. 그래서 이 낱말 하나만 목록에
+    # 넣지 않고 형태소(Kiwi)로 직접 판별한다 - "부분 문자열로 걸러 놓고
+    # 형태소로 다시 확인"하는 이중 설계 대신, 애매한 낱말은 처음부터
+    # 형태소가 유일한 판정 근거다. 나머지(중도해지·팔면·빼면·인출 등)는
+    # 그 자체로 뜻이 뚜렷한 어구라 부분 문자열로 충분하다.
     q = (question or "").replace(" ", "")
-    intents = []
-    for key, keywords in INTENT_KEYWORDS.items():
-        matched = [w for w in keywords if w.replace(" ", "") in q]
-        if not matched:
-            continue
-        if key == "redemption" and matched == ["해지"]:
-            # "해지"만 유일하게 걸렸을 때만 형태소로 확인한다. 환매/중도해지/
-            # 팔면/빼면/인출 등 다른 명시적 키워드가 이미 함께 걸렸다면
-            # ("중도해지"는 "해지"도 부분문자열로 함께 매칭된다) 의심의
-            # 여지가 없으므로 형태소 분석을 건너뛴다.
-            if not _has_termination_noun(question):
-                continue
-        intents.append(key)
+    intents = [key for key, keywords in INTENT_KEYWORDS.items()
+              if any(w.replace(" ", "") in q for w in keywords)]
+    if "account_termination" not in intents and _has_termination_noun(question):
+        intents.append("account_termination")
     return intents
 
 
@@ -497,7 +502,7 @@ def product_facts(code, class_code=None, intents=None, db_path=DEFAULT_DB_PATH):
                     ev.append({"table": "class_fees", "product_code": code,
                                "class_code": cc})
 
-        if "redemption" in intents:
+        if "fund_redemption" in intents:
             # 값을 문장 그대로 담아 둔 이유가 여기서 드러난다. "90일미만
             # 이익금의 30%"만 말하면 틀린 답이 되는 경우가 있다(뒤에
             # "다만 ... 부과하지 않음"이 붙는다).

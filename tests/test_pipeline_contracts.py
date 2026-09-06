@@ -265,7 +265,7 @@ class PipelineContracts(unittest.TestCase):
 
     def test_become_verb_is_not_read_as_contract_termination(self):
         # "~해지다"(정해지다·가능해지다)는 "~하게 되다"라는 흔한 구문이지
-        # 계약 해지가 아니다. 이걸 환매 질문으로 분류하면 제도 질문에 환매
+        # 계약 해지가 아니다. 이걸 해지 질문으로 분류하면 제도 질문에 해지
         # 설명이 없다는 이유로 답변이 영영 반려된다.
         from product_facts import detect_intents
         for question in (
@@ -273,7 +273,7 @@ class PipelineContracts(unittest.TestCase):
             "수익률이 어떻게 정해지나요?",
             "자금이 필요해지면 어떻게 해야 하나요?",
         ):
-            self.assertNotIn("redemption", detect_intents(question), question)
+            self.assertNotIn("account_termination", detect_intents(question), question)
 
     def test_real_termination_and_withdrawal_still_detected(self):
         from product_facts import detect_intents
@@ -283,7 +283,23 @@ class PipelineContracts(unittest.TestCase):
             "부분해지가 가능한가요?",
             "IRP에서 중도인출할 수 있는 경우가 어떤 경우야?",
         ):
-            self.assertIn("redemption", detect_intents(question), question)
+            self.assertIn("account_termination", detect_intents(question), question)
+
+    def test_termination_redemption_and_cancellation_are_distinct_facttypes(self):
+        # "해지"/"환매"/"매수취소"를 하나로 뭉치면(예전 "redemption") 계좌
+        # 해지 질문에 펀드 환매수수료 커버리지를 요구하는 식의 잘못된 짝짓기가
+        # 생긴다. 셋을 서로 다른 FactType으로 유지한다.
+        from product_facts import detect_intents
+        cases = {
+            "이 펀드를 환매하면 수수료가 얼마인가요?": "fund_redemption",
+            "연금저축을 해지하면 세금상 불이익이 있어?": "account_termination",
+            "매수 취소는 어떻게 하나요?": "order_cancellation",
+        }
+        for question, expected in cases.items():
+            intents = detect_intents(question)
+            self.assertIn(expected, intents, question)
+            for other in {"fund_redemption", "account_termination", "order_cancellation"} - {expected}:
+                self.assertNotIn(other, intents, f"{question} -> {intents}")
 
 
 if __name__ == "__main__": unittest.main()
