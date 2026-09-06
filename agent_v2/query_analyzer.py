@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from scripts.hcx import HcxError, chat, is_configured
 
+from . import json_extract
 from .prompts import QUERY_ANALYZER_PROMPT
 from .schemas import QueryAnchor, QueryPlan
 
@@ -50,18 +51,7 @@ class AnalysisOutcome:
     raw: str = ""
 
 
-def _extract_json(text: str) -> dict | None:
-    if not text:
-        return None
-    start = text.find("{")
-    end = text.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        value = json.loads(text[start:end + 1])
-    except (ValueError, TypeError):
-        return None
-    return value if isinstance(value, dict) else None
+_extract_json = json_extract.extract_json_object
 
 
 def _norm(text: str) -> str:

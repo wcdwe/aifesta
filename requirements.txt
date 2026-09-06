@@ -20,6 +20,12 @@ kiwipiepy
 # 토큰 사용의 큰 부분이었다.
 diskcache
 
+# HCX가 Planner/검증 JSON을 홑따옴표·trailing comma·앞뒤 설명문 섞어서
+# 낼 때가 있다(agent_v2/json_extract.py). 순수 문법만 고치고 의미는
+# 건드리지 않는다 - 도구를 잘못 고른 것 같은 의미 오류는 여전히 Pydantic
+# 검증과 Python 가드가 잡는다.
+json-repair
+
 # sentence-transformers는 로컬 임베딩 모델(LocalEmbeddingProvider,
 # EMBEDDING_PROVIDER=sentence_transformers)에서만 필요하다. 개발 환경에서는
 # huggingface.co 접근이 막혀 있어 검증하지 못했으니, 접근 가능한 환경에서만

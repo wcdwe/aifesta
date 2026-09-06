@@ -6,20 +6,11 @@ from pydantic import ValidationError
 
 from scripts.hcx import HcxError, chat, is_configured
 
+from . import json_extract
 from .prompts import FINAL_VALIDATOR_PROMPT
 from .schemas import ContextBundle, Evidence, QueryPlan, ValidationErrorItem, ValidationResult
 
-
-def _extract_json(text: str) -> dict | None:
-    start = (text or "").find("{")
-    end = (text or "").rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        value = json.loads(text[start:end + 1])
-    except (ValueError, TypeError):
-        return None
-    return value if isinstance(value, dict) else None
+_extract_json = json_extract.extract_json_object
 
 
 # HCX는 판정 내용은 맞게 내면서도 포장만 다르게 하는 일이 잦다(실측:
