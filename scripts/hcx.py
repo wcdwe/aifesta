@@ -93,8 +93,9 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
     해야 할 말이 다르다."""
     global _consecutive_failures, _breaker_open
     # 요청별 호출량은 API 응답 trace에만 요약하며 키·프롬프트 원문은 남기지 않는다.
-    from agent_v2.telemetry import (record_call, record_failure, record_success,
-                                    record_http_attempt, record_actual_usage)
+    from agent_v2.telemetry import (MIN_CALL_BUDGET_SECONDS, record_call, record_failure,
+                                    record_success, record_http_attempt,
+                                    record_actual_usage, remaining_budget)
     record_call(messages, stage=stage)
     load_dotenv()
     key = os.environ.get("NCP_CLOVASTUDIO_API_KEY")
@@ -131,6 +132,17 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
 
     last = None
     for attempt in range(len(RETRY_WAITS) + 1):
+        # 요청 전체에 남은 시간을 이 호출의 상한으로 쓴다. urllib의 timeout은
+        # 소켓 읽기 간격이라 이것만으로 총 소요를 못 막지만, 남은 예산보다 긴
+        # 대기는 확실히 끊어 평가 제한 시간을 넘기지 않게 한다.
+        budget = remaining_budget()
+        if budget is not None:
+            if budget < MIN_CALL_BUDGET_SECONDS:
+                _note_failure()
+                record_failure()
+                raise last or HcxError(
+                    f"요청 제한 시간이 얼마 남지 않아 호출하지 않음(남은 {budget:.1f}초)")
+            timeout = min(timeout, budget)
         record_http_attempt()
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         try:
@@ -154,7 +166,12 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
             record_failure()
             raise
         if attempt < len(RETRY_WAITS):
-            time.sleep(RETRY_WAITS[attempt])
+            wait = RETRY_WAITS[attempt]
+            budget = remaining_budget()
+            # 남은 시간을 기다리는 데 다 쓰면 재시도할 시간이 없다.
+            if budget is not None and budget - wait < MIN_CALL_BUDGET_SECONDS:
+                break
+            time.sleep(wait)
     _note_failure()
     record_failure()
     raise last

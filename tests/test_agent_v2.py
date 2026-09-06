@@ -505,13 +505,18 @@ class OrchestratorTests(unittest.TestCase):
         self.assertIsNotNone(body)
         self.assertIn("Python 규칙 QueryPlan fallback", body["think_trace"])
 
-    def test_generation_failure_returns_no_payload_to_runtime(self):
+    def test_generation_failure_returns_evidence_instead_of_failing(self):
+        # 생성이 실패해도(키 없음·호출 실패·제한 시간 소진) 요청 전체를
+        # 실패시키지 않는다. 지어낸 문장 대신 확보된 근거를 돌려준다.
         body = try_agent_payload(
             "Q-3", "상품 A와 B 비교",
             analyzer=lambda _q: self._analysis(), executor=self._execution,
             generator=lambda *_args, **_kwargs: GenerationOutcome(None, "생성 실패"),
         )
-        self.assertIsNone(body)
+        self.assertIsNotNone(body)
+        self.assertEqual(body["route"], "generation_unavailable")
+        self.assertIn("생성 실패", body["think_trace"])
+        self.assertIn("검증되지 않은 문장을 사실로 안내하지 않겠습니다", body["answer"])
 
     def test_high_risk_agent_uses_validator(self):
         calls = []

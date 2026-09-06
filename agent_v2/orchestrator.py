@@ -130,7 +130,16 @@ def try_agent_payload(
                 "route": "context_insufficient"}
     generated = generator(question, plan, context)
     if not generated.answer:
-        return None
+        # 생성이 실패해도(키 없음·호출 실패·제한 시간 소진) 요청 전체를
+        # 실패시키지 않는다. 근거는 이미 확보돼 있으므로, 지어낸 문장 대신
+        # 검증 게이트와 같은 방식으로 찾은 근거를 그대로 돌려준다.
+        from .validation_gate import safe_answer
+        return {"question_id": str(question_id), "question": question,
+                "retrieved_context": str(context.text),
+                "answer": safe_answer(execution.evidence),
+                "think_trace": f"계획={plan_origin}; 도구실행={execution.status}; "
+                               f"답변 생성 실패({generated.status}); 확보된 근거만 반환",
+                "route": "generation_unavailable"}
 
     def repair(action, errors, *, validation=None, previous_answer=None):
         current_execution = execution

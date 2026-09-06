@@ -41,7 +41,7 @@ FALLBACK_EXCERPT_CHARS = 300
 MAX_REPAIR_ATTEMPTS = 2
 
 
-def _safe_answer(evidence: list[Evidence]) -> str:
+def safe_answer(evidence: list[Evidence]) -> str:
     # Do not present unvalidated generated prose or truncated raw RAG as verified.
     # 검증된 계산 결과(TAX)는 LLM이 지어낸 문장이 아니라 Python이 규칙대로
     # 구한 값이라, 생성 답변을 버리는 상황에서도 그대로 내보낼 수 있는
@@ -115,5 +115,5 @@ def run_validation_gate(question, answer, plan, evidence, context, *,
             history.append({"stage": "repair", "attempt": 1, "status": "UNAVAILABLE"})
             break
         current_answer, current_evidence, current_context = repaired.answer, repaired.evidence, repaired.context
-    return GateOutcome(_safe_answer(current_evidence), "SAFE_FALLBACK", risk,
+    return GateOutcome(safe_answer(current_evidence), "SAFE_FALLBACK", risk,
         current_evidence, current_context, py_result, llm_result, retry_count, True, tuple(history))

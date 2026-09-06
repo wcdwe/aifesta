@@ -1,7 +1,40 @@
 from __future__ import annotations
 
+import os
+import time
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
+
+
+# 평가는 제한 시간 안에 응답하지 못하면 답을 못 한 것으로 친다. 호출 한 건의
+# 타임아웃만으로는 이걸 지킬 수 없다 - urllib의 timeout은 소켓 읽기 간격이라
+# 서버가 응답을 조금씩 흘리면 20초 설정에도 한 호출이 수백 초로 늘어나고
+# (실측 404초), 한 요청이 계획·생성·재생성·검증으로 최대 6번 호출한다.
+# 그래서 호출마다가 아니라 "요청 전체"에 남은 시간을 두고, 남은 시간을
+# 각 호출의 타임아웃 상한으로 넘긴다.
+DEFAULT_REQUEST_BUDGET_SECONDS = 240.0
+# 예산이 이보다 적게 남으면 새 호출을 시작하지 않는다. 시작해 봐야 응답을
+# 받기 전에 시간이 끝나 결과를 못 쓰고 시간만 버린다.
+MIN_CALL_BUDGET_SECONDS = 5.0
+
+_deadline: ContextVar[float | None] = ContextVar("agent_v2_deadline", default=None)
+
+
+def start_request_budget(seconds: float | None = None) -> None:
+    if seconds is None:
+        seconds = float(os.environ.get(
+            "AGENT_REQUEST_BUDGET_SECONDS", DEFAULT_REQUEST_BUDGET_SECONDS))
+    _deadline.set(time.monotonic() + seconds if seconds > 0 else None)
+
+
+def clear_request_budget() -> None:
+    _deadline.set(None)
+
+
+def remaining_budget() -> float | None:
+    """남은 초. 예산을 걸지 않았으면 None(무제한)."""
+    deadline = _deadline.get()
+    return None if deadline is None else deadline - time.monotonic()
 
 
 @dataclass(frozen=True)

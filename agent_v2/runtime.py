@@ -40,7 +40,12 @@ def structured_payload(question_id, question, *, expected_tool=None):
 
 def answer_payload(question_id, question):
     from .audit import configure
+    from .telemetry import start_request_budget
     configure()
+    # 평가 제한 시간을 넘기면 답을 못 한 것으로 처리된다. 남은 시간을 이
+    # 요청의 모든 LLM 호출이 공유하게 해서, 호출 하나가 늦어져도 요청 전체가
+    # 제한 시간을 넘기지 않도록 한다.
+    start_request_budget()
     from scripts import input_guard
     from .orchestrator import try_agent_payload
     blocked = input_guard.check(question_id, question)
