@@ -40,6 +40,7 @@ import json
 import os
 import re
 import sqlite3
+import statistics
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DB_PATH = os.path.join(REPO_ROOT, "data", "integrated", "structured_store.db")
@@ -158,8 +159,28 @@ def check_fee_breakdown_consistency(conn, rep):
     같은 상품 안의 다른 클래스들과 얼마나 다른지만 본다 - 한 문서
     안에서는 그 정의가 클래스마다 똑같이 적용돼야 하므로, 유독 하나만
     크게 벗어나면 그 클래스 행이 원문에서부터 깨졌다는 신호다
-    (KR5111450067 실측: C-PE/C-P2E만 여분이 0.03대, 나머지 12개 클래스는
-    전부 0.0015~0.0024대)."""
+    (KR5111450067 실측: C-PE/C-P2E만 여분이 0.03대, 나머지 17개 클래스는
+    전부 0.0019~0.0025대 - PDF 41쪽 원문 대조 결과 C-PE 행 자체가
+    "총보수(1.1526)+기타비용(0.0000)=1.1526"인데 원문의 "총보수·비용"
+    칸은 1.1826으로 인쇄되어 있어, 추출이 아니라 원문 자체의 산술
+    모순이다 - data/validation/pdf_source_issues.csv의 ISSUE000004/005로
+    이미 등록되어 있다).
+
+    다만 고정폭 0.01은 모자형 펀드마다 다른 "정상적인 여분 편차"를
+    구분 못 해 오탐을 냈다(KR5157450090 실측: 클래스 11개의 여분이
+    0.008~0.045로 원래 넓게 퍼져 있는데 - 랩(Wrap) 전용 클래스 C-W는
+    모투자신탁 안분 비율 자체가 다른 리테일 클래스들과 달라 여분이
+    작게 나오는 게 정상이다 - A/C-W 둘 다 PDF 35쪽 원문과 정확히
+    일치하는데도 median±0.01 기준에 걸려 잘못 flag됐다). 대신 median
+    절대거리 대신 MAD(median absolute deviation, 중앙값과의 절대편차의
+    중앙값)를 같이 보는 로버스트 이상치 기준을 쓴다: KR5111450067처럼
+    거의 모든 클래스가 사실상 동일한 값으로 뭉쳐 있으면(MAD≈0) 고정폭
+    0.01이 그대로 적용돼 진짜 이상치를 여전히 잡고, KR5157450090처럼
+    클래스마다 여분이 원래 넓게 퍼져 있으면(MAD가 큼) 그 넓은 편차
+    자체를 정상 변동폭으로 인정해 문턱값을 자동으로 넓힌다. 배수 6은
+    이 두 실측 사례(KR5111450067 C-PE/C-P2E는 유지, KR5157450090
+    A/C-W는 해소)로 직접 맞춘 값이다 - 5는 C-W가 여전히 걸리고, 7·8은
+    6과 결과가 같아 6이 여유 있는 최소값이다."""
     if not os.path.exists(DEFAULT_CLASS_FEES_JSON):
         rep.add("총보수·비용 여분이 같은 상품 클래스끼리 크게 어긋남", 0, 0, [],
                 info=True)
@@ -188,20 +209,24 @@ def check_fee_breakdown_consistency(conn, rep):
         if len(entries) < 3:
             continue
         diffs = sorted(d for _, d, _, _, _ in entries)
-        mid = diffs[len(diffs) // 2]
+        mid = statistics.median(diffs)
+        mad = statistics.median(abs(d - mid) for d in diffs)
+        threshold = max(0.01, 6 * mad)
         checked += len(entries)
         for class_code, diff, tf, other, tfc in entries:
-            if abs(diff - mid) > 0.01:
+            if abs(diff - mid) > threshold:
                 bad.append(
                     f"{product_code} {class_code}: 총보수 {tf} + 기타비용 {other} "
                     f"vs 총보수·비용 {tfc} (여분 {diff:.4f}, "
-                    f"같은 상품 중앙값 {mid:.4f})")
+                    f"같은 상품 중앙값 {mid:.4f}, 문턱값 {threshold:.4f}) - "
+                    f"data/validation/pdf_source_issues.csv에 이미 등록된 "
+                    f"원문 이슈인지 먼저 확인할 것")
     rep.add("총보수·비용 여분이 같은 상품 클래스끼리 크게 어긋남",
             len(bad), checked, bad,
             "총보수+기타비용과 총보수·비용의 차이가 클래스마다 조금씩 다른 "
-            "건 정상이다(모투자신탁 안분 등 문서마다의 정의) - 그런데 한 "
-            "상품 안에서 유독 하나만 크게 벗어나면 그 행 자체가 원문에서 "
-            "깨졌을 가능성이 크다")
+            "건 정상이다(모투자신탁 안분 등 문서마다의 정의, MAD 기준으로 "
+            "그 정상 편차 폭은 이미 반영함) - 그런데도 유독 하나만 크게 "
+            "벗어나면 그 행 자체가 원문에서 깨졌을 가능성이 크다")
 
 
 def check_avg_vs_yearly(conn, rep):
