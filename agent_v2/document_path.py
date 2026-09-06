@@ -86,7 +86,7 @@ def _term_weight(form: str) -> int:
     return base
 
 
-def _coverage(hit: dict, question: str) -> int:
+def topic_coverage(hit: dict, question: str) -> int:
     compact_text = re.sub(r"\s+", "", hit.get("text") or "").lower()
     tokens = [
         token.lower() for token in re.findall(r"[가-힣A-Za-z0-9]+", question or "")
@@ -108,7 +108,7 @@ def _coverage(hit: dict, question: str) -> int:
 def has_action_term_overlap(hit: dict, question: str) -> bool:
     """질문의 행위어(_ACTION_TERMS)가 hit 본문에 실제로 있는지만 본다.
 
-    _coverage()는 대상·요구정보 낱말까지 다 더하는데, 관련성 "게이트"로
+    topic_coverage()는 대상·요구정보 낱말까지 다 더하는데, 관련성 "게이트"로
     쓰기엔 그게 오히려 독이 된다 - "퇴직연금"처럼 이 코퍼스 거의 모든
     페이지에 나오는 대상어까지 coverage>0을 만들어 버려서, 정작
     "중도인출"이라는 행위어가 전혀 없는 무관한 페이지도 게이트를
@@ -170,7 +170,7 @@ def retrieve_document_hits(question: str, doc_type: str,
     hits.sort(
         key=lambda hit: (
             1 if section_pattern.search(hit.get("text") or "") else 0,
-            _coverage(hit, question), hit.get("rrf", 0.0), hit.get("score", 0.0),
+            topic_coverage(hit, question), hit.get("rrf", 0.0), hit.get("score", 0.0),
         ),
         reverse=True,
     )
@@ -224,11 +224,11 @@ _LIST_ITEM_RE = re.compile(r"(?:^|[\s\)\]])\d{1,2}[.)]\s*\S")
 _ANSWER_MARKER_RE = re.compile(r"[▶☞]|(?:^|\n)\s*•")
 
 
-def _asks_for_conditions(question: str) -> bool:
+def asks_for_conditions(question: str) -> bool:
     return bool(_CONDITIONS_QUESTION_RE.search(question or ""))
 
 
-def _list_item_count(window: str) -> int:
+def list_item_count(window: str) -> int:
     return len(_LIST_ITEM_RE.findall(window))
 
 
@@ -238,7 +238,13 @@ def _split_sentences(text: str) -> list[str]:
         line = line.strip()
         if not line:
             continue
-        sentences.extend(p.strip() for p in re.split(r"(?<=[.!?])\s+", line) if p.strip())
+        # "1. 무주택자인..."처럼 번호 목록 마침표 뒤에서 쪼개면 "1."과
+        # 항목 내용이 서로 다른 "문장"으로 갈라져 list_item_count/
+        # _LIST_ITEM_RE가 항목을 하나도 못 알아본다(실측) - 마침표
+        # 바로 앞이 숫자면(=목록 번호) 그 자리에서는 안 쪼갠다.
+        sentences.extend(
+            p.strip() for p in re.split(r"(?<!\d[.!?])(?<=[.!?])\s+", line) if p.strip()
+        )
     return sentences
 
 
@@ -251,6 +257,34 @@ def _sentence_windows(text: str, size: int = 3) -> list[str]:
     if len(sentences) <= size:
         return [" ".join(sentences)]
     return [" ".join(sentences[i:i + size]) for i in range(len(sentences))]
+
+
+def _list_block_start(sentences: list[str], from_idx: int) -> int:
+    """from_idx 근처(±몇 문장)에서 목록 항목을 찾아, 그 목록이 실제로
+    시작되는 문장 인덱스까지 거꾸로 되짚는다.
+
+    관련성 점수로 고른 "가장 잘 맞는 구간"이 항상 목록의 첫 항목에서
+    시작하지는 않는다 - 질문 표현에 따라 뒷부분 항목(예: 6, 7번)이 더
+    높은 점수를 받을 수 있다(실측: "중도인출 사유가 뭐가 있나요?"는
+    6·7번 사유가 있는 구간이 1등이었다). 이대로 앞으로만 이어 붙이면
+    1~5번은 영영 안 나온다 - 목록의 실제 시작점부터 다시 모은다."""
+    first_item = None
+    for idx in range(from_idx, min(from_idx + 8, len(sentences))):
+        if _LIST_ITEM_RE.search(sentences[idx]):
+            first_item = idx
+            break
+    if first_item is None:
+        return from_idx
+    start = first_item
+    while start > 0 and _LIST_ITEM_RE.search(sentences[start - 1]):
+        start -= 1
+    # 목록 항목 자체에는 "왜 이 목록인지"(예: "중도인출")가 안 적혀
+    # 있을 수 있다 - 그 말은 보통 목록 바로 앞의 안내 문장에 있다
+    # (실측: "• 일정 조건을 충족하면 중도인출이 가능합니다." 없이
+    # 항목만 나오면 답변에 "중도인출"이라는 낱말 자체가 사라진다).
+    # 목록 바로 앞 문장 최대 2개까지 안내문으로 함께 포함한다.
+    start = max(0, start - 2)
+    return start
 
 
 def _extend_list_window(sentences: list[str], start: int, max_chars: int) -> str:
@@ -292,7 +326,7 @@ def relevant_excerpt(question: str, text: str, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text
     windows = [(i, w) for i, w in enumerate(_sentence_windows(text, size=3))]
-    asks_conditions = _asks_for_conditions(question)
+    asks_conditions = asks_for_conditions(question)
     if asks_conditions:
         # 조건·사유 목록은 보통 한 항목이 한 문장이라, 3문장 구간엔
         # 기껏해야 항목 1~2개만 걸린다. "몇 가지 조건 중 어떤 것들인가"를
@@ -320,8 +354,8 @@ def relevant_excerpt(question: str, text: str, max_chars: int) -> str:
     #   5) 그래도 같으면 문서에 나온 원래 순서(앞선 구간)
     def _rank(item):
         i, w = item
-        list_count = _list_item_count(w) if asks_conditions else 0
-        score = _coverage({"text": w}, question) + _topic_bonus(question, w)
+        list_count = list_item_count(w) if asks_conditions else 0
+        score = topic_coverage({"text": w}, question) + _topic_bonus(question, w)
         if asks_conditions and list_count >= 2:
             score += 6.0
         return (
@@ -345,7 +379,9 @@ def relevant_excerpt(question: str, text: str, max_chars: int) -> str:
     # 끝날 때까지 이어 붙인다(항목 개수에 맞춰 늘어나므로 3개짜리
     # 목록이든 7개짜리 목록이든 같은 규칙으로 다 붙는다).
     if asks_conditions and best_list_count >= 2:
-        grown = _extend_list_window(_split_sentences(text), best_i, max_chars * 3)
+        sentences = _split_sentences(text)
+        block_start = _list_block_start(sentences, best_i)
+        grown = _extend_list_window(sentences, block_start, max_chars * 3)
         if len(grown) > len(best):
             best = grown
     effective_max = max_chars * 3 if (asks_conditions and best_list_count >= 2) else max_chars

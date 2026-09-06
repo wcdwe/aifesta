@@ -51,8 +51,11 @@ import product_ranking  # noqa: E402
 import institution_facts  # noqa: E402
 from agent_v2.pre_router import pre_route  # noqa: E402
 from agent_v2.document_path import (  # noqa: E402
-    relevant_excerpt,
+    asks_for_conditions,
     has_action_term_overlap,
+    list_item_count,
+    relevant_excerpt,
+    topic_coverage,
     try_simple_institution_document,
     try_simple_product_document,
 )
@@ -416,7 +419,33 @@ def _best_scored_hit(hits, query, intents, exclude_ids=frozenset()):
     if covered:
         scored = covered
 
-    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    # 조건·사유 질문("어떤 경우에 가능한가")은 구조 가산점(문장종결·항목값
+    # 등)이 화제 커버리지보다 앞서면 안 된다 - 실측: "중도인출 사유가
+    # 뭐가 있나요?"에서 "중도인출"을 스쳐 지나가듯 한 번 언급한 무관한
+    # 페이지(제도 변경 안내)가, 진짜 사유 목록이 있는 페이지(화제
+    # 커버리지가 더 높음)를 구조 점수만으로 역전했다. 행위어 게이트만
+    # 으로는 둘 다 "중도인출"을 담고 있어 못 갈랐다.
+    #
+    # topic_coverage만 1순위로 쓰면 또 다른 문제가 있다 - 사유 하나만
+    # 다루는 개별 문서(doc50 등)의 도입부 boilerplate("퇴직연금제도는
+    # ...중도인출이 허용됩니다")가 낱말 겹침만으로 사유 전체를 표로
+    # 담은 문서(doc14 p.2)보다 근소하게 coverage가 더 높게 나온 적이
+    # 있다(실측: 19 대 18). 그래서 목록 항목이 실제로 여러 개(2개
+    # 이상)면 coverage에 가산해 - 근소한 차이로는 "사유 하나만 다루는
+    # 문서"가 "여러 사유를 한 번에 답할 수 있는 문서"를 못 이기게
+    # 한다. 다른 질문 유형은 기존 동작을 그대로 둔다(회귀 위험을
+    # 조건 질문 범위로 좁힌다).
+    def _conditions_rank(item):
+        _, _, h = item
+        cov = topic_coverage(h, query)
+        if list_item_count(h.get("text") or "") >= 2:
+            cov += 6
+        return (cov, item[0], item[1])
+
+    if asks_for_conditions(query):
+        scored = sorted(scored, key=_conditions_rank, reverse=True)
+    else:
+        scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
     best_score, _, best_hit = scored[0]
     # 부동소수점 오차(0.7-0.25가 정확히 0.45가 아니라 0.44999...로 나오는
     # 등)로 문턱 바로 위 점수가 억울하게 탈락하지 않도록 아주 작은
