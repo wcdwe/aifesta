@@ -51,8 +51,9 @@ def _usable(hit: dict) -> bool:
     return True
 
 
-def _retrieve(question: str, doc_type: str, product_code: str | None = None,
-              k: int = 10) -> list[dict]:
+def retrieve_document_hits(question: str, doc_type: str,
+                           product_code: str | None = None,
+                           k: int = 10) -> list[dict]:
     semantic = semantic_search(question, k=k, doc_type=doc_type, product_code=product_code)
     lexical = lexical_search(question, k=k, doc_type=doc_type, product_code=product_code)
     pooled: dict[tuple, dict] = {}
@@ -114,7 +115,7 @@ def try_simple_product_document(question_id: str, question: str) -> dict | None:
 
     candidate = resolution.candidates[0]
     # 통합 저장소의 실제 상품 doc_type 값은 단수형 `product`다.
-    hits = _retrieve(question, "product", candidate.product_code)
+    hits = retrieve_document_hits(question, "product", candidate.product_code)
     if not hits:
         return None
     context = _context(hits)
@@ -173,7 +174,7 @@ def try_simple_institution_document(question_id: str, question: str) -> dict | N
             "route": "institution_facts",
         }
 
-    hits = _retrieve(question, "institution")
+    hits = retrieve_document_hits(question, "institution")
     if not hits:
         return None
     context = _context(hits)

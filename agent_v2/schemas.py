@@ -134,6 +134,14 @@ class ToolExecutionResult(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class ContextBundle(BaseModel):
+    text: str
+    evidence_ids: list[str] = Field(default_factory=list)
+    omitted_evidence_ids: list[str] = Field(default_factory=list)
+    char_count: int = 0
+    truncated: bool = False
+
+
 class ValidationErrorItem(BaseModel):
     criterion: str
     problem: str

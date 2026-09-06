@@ -11,6 +11,7 @@ from scripts.product_ranking import ASSET_TYPE_GROUPS
 from scripts.tax_calculator import answer_from_question
 
 from .product_resolver import resolve_product
+from .document_path import retrieve_document_hits
 from .schemas import Evidence, FilterOperator, QueryFilter, QueryPlan, ToolExecutionResult
 
 
@@ -201,7 +202,36 @@ def execute_plan(question: str, plan: QueryPlan) -> ToolExecutionResult:
                 source="tax_calculator", data={"rules": ev},
             ))
 
-    unsupported = sorted(set(plan.tools) - {"RESOLVE", "FACT", "FILTER", "COMPARE", "TAX"})
+    if "RAG" in plan.tools:
+        rag_hits: list[dict] = []
+        if codes:
+            for code in codes:
+                rag_hits.extend(retrieve_document_hits(question, "product", code, k=8))
+        else:
+            rag_hits.extend(retrieve_document_hits(question, "institution", k=8))
+        seen = set()
+        rag_evidence = []
+        for hit in rag_hits:
+            key = (hit.get("doc_id"), hit.get("page"), hit.get("product_code"))
+            if key in seen:
+                continue
+            seen.add(key)
+            ev = Evidence(
+                evidence_id=f"RAG-{len(rag_evidence) + 1}", kind="document",
+                content=(hit.get("text") or "")[:700],
+                source=str(hit.get("doc_id")),
+                product_code=hit.get("product_code") or None,
+                page=int(hit["page"]),
+                data={"doc_type": hit.get("doc_type"), "chunk_id": hit.get("chunk_id")},
+            )
+            rag_evidence.append(ev)
+        if not rag_evidence:
+            errors.append("RAG에서 사용할 수 있는 본문 근거를 찾지 못함")
+        else:
+            results["RAG"] = [item.model_dump(mode="json") for item in rag_evidence]
+            evidence.extend(rag_evidence)
+
+    unsupported = sorted(set(plan.tools) - {"RESOLVE", "FACT", "FILTER", "COMPARE", "TAX", "RAG"})
     if unsupported:
         errors.append(f"아직 연결되지 않은 도구: {unsupported}")
     status = "FAIL" if errors and not evidence else "PARTIAL" if errors else "PASS"

@@ -10,6 +10,7 @@ from agent_v2.document_path import (
 from agent_v2.product_resolver import resolve_product
 from agent_v2.query_analyzer import parse_plan
 from agent_v2.executor import execute_plan
+from agent_v2.context_builder import build_context
 from agent_v2.schemas import ValidationResult
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
@@ -183,6 +184,40 @@ class PlanExecutorTests(unittest.TestCase):
         self.assertEqual(result.status, "PASS", result.errors)
         self.assertIn("KR5153420079", result.tool_results["COMPARE"])
         self.assertIn("KR5153420105", result.tool_results["COMPARE"])
+
+    def test_rag_is_scoped_per_resolved_product(self):
+        raw = """{"intents":["상품설명"],"entities":{},"product_mentions":[
+        {"text":"미래에셋장기성장포커스","role":"single","resolution_required":true}],
+        "required_facts":["투자전략"],"filters":[],"metrics":[],"periods":[],"sort":[],
+        "limit":null,"return_all":false,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["RESOLVE","RAG"],"completeness":"single_answer","plan":[
+        {"step":1,"tool":"RESOLVE","purpose":"상품 식별","depends_on":[]},
+        {"step":2,"tool":"RAG","purpose":"투자전략 검색","depends_on":[1]}]}"""
+        question = "미래에셋장기성장포커스 투자전략을 설명해줘"
+        plan = parse_plan(raw, question).plan
+        result = execute_plan(question, plan)
+        self.assertEqual(result.status, "PASS", result.errors)
+        docs = [item for item in result.evidence if item.kind == "document"]
+        self.assertTrue(docs)
+        self.assertTrue(all(item.product_code == "KR510902511M" for item in docs))
+
+    def test_context_builder_dedupes_and_reports_budget_omissions(self):
+        question = "미래에셋장기성장포커스 투자전략을 설명해줘"
+        raw = """{"intents":["상품설명"],"entities":{},"product_mentions":[
+        {"text":"미래에셋장기성장포커스","role":"single","resolution_required":true}],
+        "required_facts":["투자전략"],"filters":[],"metrics":[],"periods":[],"sort":[],
+        "limit":null,"return_all":false,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["RESOLVE","RAG"],"completeness":"single_answer","plan":[
+        {"step":1,"tool":"RESOLVE","purpose":"식별","depends_on":[]},
+        {"step":2,"tool":"RAG","purpose":"검색","depends_on":[1]}]}"""
+        plan = parse_plan(raw, question).plan
+        result = execute_plan(question, plan)
+        bundle = build_context(plan, result, char_budget=900)
+        self.assertTrue(bundle.text)
+        self.assertTrue(bundle.truncated)
+        self.assertTrue(bundle.omitted_evidence_ids)
 
 
 class FastStructuredTests(unittest.TestCase):
