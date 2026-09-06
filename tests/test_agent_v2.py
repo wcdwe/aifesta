@@ -857,26 +857,22 @@ class RagConditionsAnswerTests(unittest.TestCase):
         확인한다."""
         from api.server import answer_payload
 
-        payload = answer_payload("Q", "퇴직연금 중도인출은 어떤 경우에 가능한가요?")
-        answer = payload.get("answer", "")
-        for group in self._REASON_GROUPS:
-            self.assertTrue(
-                any(term in answer for term in group),
-                f"답변에 {group} 중 어느 것도 없음: {answer!r}",
-            )
-
-    @unittest.expectedFailure
-    def test_early_withdrawal_conditions_rewording_is_a_known_gap(self):
-        """"어떤 경우에 가능한가요"를 "사유가 뭐가 있나요"로만 바꿔도
-        검색 자체가 doc13(제도 변경 안내, 무관)로 새어 버린다 - 이건
-        발췌 선택이 아니라 이 표현에서의 검색 순위 문제라 알려진 한계로
-        남겨 둔다."""
-        from api.server import answer_payload
-
-        payload = answer_payload("Q", "퇴직연금 중도인출 사유가 뭐가 있나요?")
-        answer = payload.get("answer", "")
-        for group in self._REASON_GROUPS:
-            self.assertTrue(any(term in answer for term in group))
+        questions = [
+            "퇴직연금 중도인출은 어떤 경우에 가능한가요?",
+            # "사유가 뭐가 있나요"로만 바꾸면 한때 검색 자체가 doc13(제도
+            # 변경 안내, 무관)로 샜다 - _split_sentences가 "1." 같은
+            # 번호 목록 마침표에서 잘못 쪼개 목록 인식 자체가 깨졌던
+            # 게 원인이었다(수정 후 회귀 테스트로 남긴다).
+            "퇴직연금 중도인출 사유가 뭐가 있나요?",
+        ]
+        for question in questions:
+            payload = answer_payload("Q", question)
+            answer = payload.get("answer", "")
+            for group in self._REASON_GROUPS:
+                self.assertTrue(
+                    any(term in answer for term in group),
+                    f"{question!r} 답변에 {group} 중 어느 것도 없음: {answer!r}",
+                )
 
 
 if __name__ == "__main__":
