@@ -11,7 +11,8 @@ from agent_v2.product_resolver import resolve_product
 from agent_v2.query_analyzer import parse_plan
 from agent_v2.executor import execute_plan
 from agent_v2.context_builder import build_context
-from agent_v2.schemas import ValidationResult
+from agent_v2.grounding_validator import validate_grounding
+from agent_v2.schemas import ContextBundle, Evidence, QueryPlan, ValidationResult
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
 
@@ -84,6 +85,107 @@ class ValidationSchemaTests(unittest.TestCase):
     def test_fail_requires_error(self):
         with self.assertRaises(ValueError):
             ValidationResult(status="FAIL", retry_action="REGENERATE", errors=[])
+
+
+class GroundingValidatorTests(unittest.TestCase):
+    def setUp(self):
+        self.plan = QueryPlan(intents=["상품설명"], tools=[])
+        self.evidence = [Evidence(
+            evidence_id="E1", kind="structured",
+            content="상품코드 KR1234567890, A-e 클래스 총보수 연 0.32%, 위험등급 3등급",
+            source="product_master", product_code="KR1234567890", class_code="A-e",
+        )]
+        self.context = ContextBundle(text=self.evidence[0].content, evidence_ids=["E1"])
+
+    def test_grounded_answer_passes(self):
+        result = validate_grounding(
+            "이 상품 A-e 클래스 총보수와 위험등급 알려줘",
+            "A-e 클래스 총보수는 연 0.32%이고 위험등급은 3등급입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.status, "PASS", result.errors)
+
+    def test_unsupported_number_fails(self):
+        result = validate_grounding(
+            "이 상품 총보수 알려줘", "총보수는 연 0.45%입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(result.retry_action, "REGENERATE")
+
+    def test_unknown_product_code_requires_resolution(self):
+        result = validate_grounding(
+            "상품 설명", "상품코드는 KR9999999999입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.retry_action, "RESOLVE_PRODUCT")
+
+    def test_unknown_class_requires_resolution(self):
+        result = validate_grounding(
+            "이 상품 클래스 알려줘", "C-Pe 클래스입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.retry_action, "RESOLVE_PRODUCT")
+
+    def test_total_fee_cannot_be_renamed_total_cost(self):
+        result = validate_grounding(
+            "이 상품 보수 알려줘", "총보수·비용은 연 0.32%입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(any("총보수·비용" in e.problem for e in result.errors))
+
+    def test_fake_source_page_fails(self):
+        result = validate_grounding(
+            "상품 설명", "위험등급은 3등급입니다. (출처: fake.pdf, p.12)",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(any("출처·페이지" in e.problem for e in result.errors))
+
+    def test_unsupported_principal_guarantee_uses_safe_fallback(self):
+        result = validate_grounding(
+            "원금 손실 없어?", "이 상품은 원금이 보장됩니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.retry_action, "SAFE_FALLBACK")
+
+    def test_truncated_all_matches_retrieves_more(self):
+        plan = QueryPlan(
+            intents=["조건검색"], return_all=True, completeness="all_matches", tools=[]
+        )
+        context = ContextBundle(
+            text=self.context.text, evidence_ids=["E1"], omitted_evidence_ids=["E2"],
+            truncated=True,
+        )
+        result = validate_grounding(
+            "조건에 맞는 상품 모두 알려줘", "조건에 맞는 상품은 모두 1개입니다.",
+            plan, self.evidence, context,
+        )
+        self.assertEqual(result.retry_action, "RETRIEVE_MORE")
+
+    def test_return_period_must_be_named(self):
+        plan = QueryPlan(
+            intents=["상품설명"], metrics=["return_5y"], periods=["5년"], tools=[]
+        )
+        evidence = [Evidence(
+            evidence_id="R1", kind="structured", content="최근 5년 수익률 12.3%",
+            source="class_returns",
+        )]
+        result = validate_grounding(
+            "최근 5년 수익률 알려줘", "수익률은 12.3%입니다.", plan, evidence,
+            ContextBundle(text=evidence[0].content, evidence_ids=["R1"]),
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(any("수익률 기간" in e.problem for e in result.errors))
+
+    def test_risk_grade_direction_error_fails(self):
+        result = validate_grounding(
+            "위험등급 설명", "1등급이 가장 낮은 위험등급입니다.",
+            self.plan, self.evidence, self.context,
+        )
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(any("위험등급 숫자" in e.problem for e in result.errors))
 
 
 class QueryAnalyzerTests(unittest.TestCase):
