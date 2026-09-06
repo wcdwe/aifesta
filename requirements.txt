@@ -15,6 +15,11 @@ uvicorn
 # Python 확장이라 별도 바이너리 설치 없이 pip만으로 된다.
 kiwipiepy
 
+# 같은 (messages, model, ...)로 HCX를 다시 부르면 캐시에서 바로 돌려준다
+# (scripts/hcx.py chat 참고). 개발 중 같은 질문을 반복 테스트하는 게
+# 토큰 사용의 큰 부분이었다.
+diskcache
+
 # sentence-transformers는 로컬 임베딩 모델(LocalEmbeddingProvider,
 # EMBEDDING_PROVIDER=sentence_transformers)에서만 필요하다. 개발 환경에서는
 # huggingface.co 접근이 막혀 있어 검증하지 못했으니, 접근 가능한 환경에서만

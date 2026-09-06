@@ -11,6 +11,7 @@ __pycache__/
 
 # Temporary and generated local files
 tmp/
+.cache/
 *.tmp
 *.log
 *.db

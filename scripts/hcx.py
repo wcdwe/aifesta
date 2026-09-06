@@ -25,6 +25,7 @@
 """
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -84,6 +85,30 @@ def is_configured():
     return bool(os.environ.get("NCP_CLOVASTUDIO_API_KEY"))
 
 
+# 같은 (messages, model, temperature, ...)로 다시 부르면 같은 값을 캐시에서
+# 돌려준다. 키가 messages 전체 내용을 그대로 해싱하므로 prompts.py를 고치면
+# 그 즉시 새 키가 되어 옛 답이 섞여 나올 일이 없다 - 버전 번호를 따로 관리할
+# 필요가 없다. 개발 중 반복 테스트로 같은 질문을 수십 번 다시 부르는 게
+# 이번 세션 토큰 사용의 큰 부분이었다.
+_CACHE_DIR = os.path.join(REPO_ROOT, ".cache", "hcx")
+_cache = None
+
+
+def _get_cache():
+    global _cache
+    if _cache is None:
+        import diskcache
+        _cache = diskcache.Cache(_CACHE_DIR, size_limit=int(2**30))  # 1GB
+    return _cache
+
+
+def _cache_key(payload):
+    digest = hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    return digest
+
+
 def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
          repeat_penalty=1.1, timeout=None, model=None, stage="unspecified"):
     """messages(role/content 목록) -> 답변 글자.
@@ -112,6 +137,18 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
     url = base if base.endswith(model) else f"{base}/{model}"
     if timeout is None:
         timeout = float(os.environ.get("NCP_CLOVASTUDIO_TIMEOUT", DEFAULT_TIMEOUT))
+
+    cache_key = None
+    if not os.environ.get("HCX_CACHE_DISABLED"):
+        cache_key = _cache_key({
+            "messages": messages, "model": model, "temperature": temperature,
+            "top_p": top_p, "repeat_penalty": repeat_penalty, "max_tokens": max_tokens,
+        })
+        cached = _get_cache().get(cache_key)
+        if cached is not None:
+            record_success(cached)
+            _consecutive_failures = 0
+            return cached
 
     payload = {
         "messages": messages,
@@ -152,6 +189,8 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
             record_actual_usage(json.loads(raw))
             record_success(out)
             _consecutive_failures = 0
+            if cache_key is not None:
+                _get_cache().set(cache_key, out)
             return out
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
