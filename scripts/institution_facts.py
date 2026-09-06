@@ -247,11 +247,13 @@ def institution_facts_answer(question, facts=None):
         rows = facts_for(subject, predicates, facts)
         if not rows:
             continue
-        if len(subjects) > 1:
-            full = _SUBJECT_FULL_NAME.get(subject)
-            sub_lines = [f"[{subject}({full})]" if full and full != subject else f"[{subject}]"]
-        else:
-            sub_lines = []
+        # subject가 하나뿐이어도 답에 그 이름을 남긴다 - 예전엔 여러
+        # subject를 물었을 때만 헤더를 붙였는데, 그러면 "IRP 계좌는 누가
+        # 가입할 수 있나요?"처럼 subject 하나짜리 질문의 답이 "- 가입대상:
+        # ..."으로만 나가 질문에서 되물은 대상(IRP)이 사라진다(실측,
+        # INST-08 - 값은 맞는데 "무엇에 대한" 값인지 답 자체엔 없었다).
+        full = _SUBJECT_FULL_NAME.get(subject)
+        sub_lines = [f"[{subject}({full})]" if full and full != subject else f"[{subject}]"]
         for r in rows:
             sub_lines.append(_format_fact_line(r))
             evidence.append({
