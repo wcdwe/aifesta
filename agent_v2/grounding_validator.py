@@ -47,6 +47,20 @@ def _error(criterion: str, problem: str, correction: str,
     )
 
 
+_RE_DOC_NUM = re.compile(r"^doc0*(\d+)$")
+
+
+def _doc_number(source: str) -> str | None:
+    """doc23/DOC00023처럼 실제 doc_id는 같아도 0패딩·대소문자 표기가 갈릴
+    때가 있다(관측: evidence.source="doc23"인데 LLM이 답변에 "DOC00023"
+    으로 씀 - 인용한 문서 자체는 맞는데 0패딩만 다름). institution
+    문서의 "doc+숫자" 형태에만 한정한다 - product 문서 파일명
+    (R2_KR5153420063.pdf 등)에 이걸 적용하면 안에 섞인 다른 숫자로
+    엉뚱한 문서를 같은 문서로 오인할 수 있다."""
+    match = _RE_DOC_NUM.match(source)
+    return str(int(match.group(1))) if match else None
+
+
 def _source_page_pairs(evidence: Iterable[Evidence]) -> set[tuple[str, int]]:
     pairs: set[tuple[str, int]] = set()
     for item in evidence:
@@ -56,6 +70,9 @@ def _source_page_pairs(evidence: Iterable[Evidence]) -> set[tuple[str, int]]:
         pairs.add((source, item.page))
         # 답변에는 전체 경로 대신 파일명 또는 doc id만 쓰기도 한다.
         pairs.add((source.replace("\\", "/").rsplit("/", 1)[-1], item.page))
+        number = _doc_number(source)
+        if number is not None:
+            pairs.add((number, item.page))
     return pairs
 
 
@@ -72,7 +89,9 @@ def _citation_errors(answer: str, evidence: list[Evidence]) -> list[ValidationEr
     for source, page_text in RE_CITATION.findall(answer or ""):
         page = int(page_text)
         normalized = source.strip(" []").lower()
-        if not any(page == p and normalized == s for s, p in available):
+        number = _doc_number(normalized)
+        if not any(page == p and (normalized == s or (number is not None and number == s))
+                   for s, p in available):
             errors.append(_error(
                 "근거 완전성",
                 f"답변의 출처·페이지를 검색 근거에서 확인할 수 없음: {source.strip()}, p.{page}",

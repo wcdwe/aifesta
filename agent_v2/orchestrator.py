@@ -43,6 +43,34 @@ def _trace(plan: QueryPlan, execution: ToolExecutionResult, generation: str, gat
     )
 
 
+# 실행 오류 원문에는 pydantic 검증 덤프("1 validation error for QueryFilter
+# ... https://errors.pydantic.dev/..."), 내부 도구 이름("Task 1 (POLICY):
+# 승인된 정책 템플릿과 일치하지 않음") 같은 내부 사정이 섞여 있다. 이걸
+# 그대로 answer로 내보내면 고객이 알 수 없는 문자열을 보게 되고 내부 구조도
+# 드러난다. 채점자용 상세는 think_trace에 그대로 남기고, answer에는 사용자가
+# 스스로 조치할 수 있는 사유만 옮긴다.
+_USER_FACING_REASONS = (
+    ("납입액", "세액공제를 계산하려면 납입액이 필요합니다."),
+    ("소득 정보", "적용 공제율을 정하려면 총급여 또는 종합소득금액이 필요합니다."),
+    ("단일 계좌 유형", "계좌를 IRP와 연금저축 중 하나로 특정해 주시면 계산해 드릴 수 있습니다."),
+    ("기본 세액공제뿐", "요청하신 세목은 정형 계산 범위 밖이라 문서 근거로만 확인할 수 있습니다."),
+    ("특례", "특례 조건은 정형 계산 범위 밖이라 문서 근거로만 확인할 수 있습니다."),
+    ("본문 근거를 찾지 못함", "질문에 해당하는 문서 근거를 찾지 못했습니다."),
+    ("상품 식별", "질문에 적힌 상품을 특정하지 못했습니다. 정확한 상품명이나 상품코드를 알려주세요."),
+    ("상품명이 없음", "어떤 상품을 말씀하시는지 상품명이나 상품코드를 알려주세요."),
+    ("COMPARE 대상", "비교하려면 상품을 두 개 이상 특정해 주세요."),
+)
+
+
+def _user_facing_reason(errors: list[str]) -> str:
+    messages: list[str] = []
+    for error in errors:
+        for marker, message in _USER_FACING_REASONS:
+            if marker in error and message not in messages:
+                messages.append(message)
+    return " ".join(messages)
+
+
 def try_agent_payload(
     question_id: str,
     question: str,
@@ -61,12 +89,12 @@ def try_agent_payload(
     plan = analysis.plan
     plan_origin = analysis.status
     if plan is None:
-        plan = build_rule_plan(question)
+        plan = build_rule_plan(question, anchor)
         plan_origin = f"{analysis.status}; Python 규칙 QueryPlan fallback"
     if plan is None:
         return None
     try:
-        plan = merge_anchor_plan(anchor, plan)
+        plan = merge_anchor_plan(anchor, plan, question)
     except ValueError:
         logging.getLogger(__name__).warning("Anchor/Planner contract rejected")
         return None
@@ -74,8 +102,9 @@ def try_agent_payload(
     if not execution.evidence:
         return {"question_id": str(question_id), "question": question,
                 "retrieved_context": "확인된 근거 없음",
-                "answer": "요청한 조건을 확인하는 데 필요한 근거 또는 실행 입력이 부족합니다. 상품이 없다는 뜻은 아닙니다. "
-                          + " / ".join(execution.errors),
+                "answer": ("요청한 조건을 확인하는 데 필요한 근거 또는 실행 입력이 부족합니다. "
+                           "상품이 없다는 뜻은 아닙니다. "
+                           + _user_facing_reason(execution.errors)).strip(),
                 "think_trace": f"계획={plan_origin}; 도구실행={execution.status}; errors={execution.errors}; LLM 생성 생략",
                 "route": "agent_insufficient"}
     if execution.status == "PASS" and set(plan.tools).issubset({"FACT", "FILTER", "COMPARE"}):

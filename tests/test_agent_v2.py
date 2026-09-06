@@ -76,8 +76,15 @@ class PreRouterTests(unittest.TestCase):
         decision = pre_route("채권형 펀드 중에서 수익률이 가장 좋은 것")
         self.assertNotEqual(decision.route, "FAST_POLICY")
 
-    def test_personalized_recommendation_keeps_existing_agent_path(self):
+    def test_recommendation_without_stated_profile_asks_back(self):
+        # "제 나이에 맞는"이라고만 하고 나이를 밝히지 않았다 - 개인화에 필요한
+        # 조건이 하나도 없으므로 임의 추천 대신 확인 조건을 되묻는다.
         decision = pre_route("제 나이에 맞는 펀드 하나만 콕 집어 추천해주세요")
+        self.assertEqual(decision.route, "FAST_POLICY")
+        self.assertEqual(decision.template_id, "recommendation_missing_profile")
+
+    def test_recommendation_with_stated_profile_keeps_agent_path(self):
+        decision = pre_route("35세이고 IRP로 20년 이상 투자할 건데 어떤 상품이 좋아?")
         self.assertEqual(decision.route, "AGENT")
 
     def test_simple_structured_question(self):
@@ -486,12 +493,16 @@ class OrchestratorTests(unittest.TestCase):
             "question_id", "question", "retrieved_context", "think_trace", "answer"
         )))
 
-    def test_analysis_failure_returns_no_payload_to_runtime(self):
+    def test_analysis_failure_falls_back_to_python_rule_plan(self):
+        # Planner JSON이 깨져도 요청 전체를 실패시키지 않는다. 레거시 RAG
+        # 경로로 새지 않고(별도 계약 테스트가 지킨다) Python이 세운 규칙
+        # 계획으로 같은 검증 파이프라인을 그대로 태운다.
         body = try_agent_payload(
             "Q-2", "질문",
             analyzer=lambda _q: AnalysisOutcome(None, "분석 실패"),
         )
-        self.assertIsNone(body)
+        self.assertIsNotNone(body)
+        self.assertIn("Python 규칙 QueryPlan fallback", body["think_trace"])
 
     def test_generation_failure_returns_no_payload_to_runtime(self):
         body = try_agent_payload(

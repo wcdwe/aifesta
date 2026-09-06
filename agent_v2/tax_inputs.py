@@ -12,9 +12,15 @@ def extract_roles(question):
         values = [_parse_krw(m[1]) for m in re.finditer(rf"(?:{label})\s*(?:은|는|이|가)?\s*({MONEY})", question)]
         if len(set(values)) > 1: raise ValueError(f"{role}에 서로 다른 금액이 있음")
         if values: roles[role] = values[0]
+    # 사람은 "납입"이라는 낱말로만 묻지 않는다 - "400만원 넣었어", "300만원
+    # 입금하면"처럼 흔한 표현을 못 읽어 납입액이 있는 질문까지 계산 불가로
+    # 떨어졌다(실측). 다만 금액을 이 동사에 "붙어 있을 때만" 결합한다 -
+    # 사이에 다른 말이 끼면("500만 원, IRP에 400만 원 넣으면"의 500만 원)
+    # 그 금액이 무엇을 뜻하는지 문장이 밝힌 게 아니므로 잡지 않는다.
+    # 세금을 내는 "납부"는 납입이 아니므로 넣지 않는다.
     contributions = []
-    for pattern in (rf"(?:납입액|납입금액|납입금|납입)\s*(?:은|는|이|가)?\s*({MONEY})",
-                    rf"({MONEY})\s*(?:을|를)?\s*납입"):
+    for pattern in (rf"(?:납입액|납입금액|납입금|납입|불입액|불입금)\s*(?:은|는|이|가)?\s*({MONEY})",
+                    rf"({MONEY})\s*(?:을|를)?\s*(?:납입|불입|입금|저축|넣)"):
         contributions.extend(_parse_krw(m[1]) for m in re.finditer(pattern, question))
     if len(set(contributions)) > 1: raise ValueError("여러 계좌 납입액은 계좌별 합산 계획이 필요함")
     if contributions: roles["contribution"] = contributions[0]

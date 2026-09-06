@@ -11,7 +11,6 @@ from .structured_request import compile_structured
 
 
 _RECOMMENDATION = re.compile(r"추천|골라|선택해|어떤\s*상품이\s*(좋|나아)")
-_VAGUE_PRODUCT_REQUEST = re.compile(r"어떤\s*(상품|펀드)(이|가)?\s*(좋|나아)")
 _LOSS_INTOLERANCE = re.compile(r"원금\s*손실.*(싫|안\s*돼|없)|손실.*절대|절대.*손실")
 _GUARANTEED_RETURN = re.compile(r"무조건.*(수익|벌)|수익.*보장|절대.*(오르|수익)")
 _LOW_RISK_HIGH_RETURN = re.compile(
@@ -44,7 +43,14 @@ def pre_route(question: str, anchor: QueryAnchor | None = None) -> PreRouteDecis
             safety_flags=flags,
             template_id="conflicting_risk_return",
         )
-    if recommendation and _VAGUE_PRODUCT_REQUEST.search(text) and not _PROFILE.search(text):
+    # 되물어야 하는 상황은 "어떤 상품이 좋아?"라는 특정 표현이 아니라
+    # "추천을 원하는데 판단에 필요한 조건(계좌·기간·손실감내)이 하나도
+    # 안 밝혀진 상태" 자체다. 표현으로 좁히면 "좋은 연금 상품 하나 추천해
+    # 주세요"처럼 흔한 문장이 이 경로를 못 타고 Agent로 넘어가, POLICY
+    # 도구가 승인 템플릿을 못 찾아 내부 오류 문자열이 그대로 답변으로
+    # 나갔다(실측). 대상 상품이 이미 특정된 질문은 그 상품 자체를 설명해야
+    # 하므로 여기서 되묻지 않는다.
+    if recommendation and not anchor.products and not _PROFILE.search(text):
         return PreRouteDecision(
             route="FAST_POLICY",
             reasons=["개인화 추천에 필요한 계좌·기간·손실감내 정보가 없음"],

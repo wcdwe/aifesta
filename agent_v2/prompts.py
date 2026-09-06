@@ -10,7 +10,7 @@ exact/unambiguous 상품코드가 있거나 multiple이 명시적 비교 대상�
 
 gap_types는 user_information_missing|evidence_missing|product_ambiguity|product_not_found|condition_conflict만 쓴다. safety_flags는 loss_intolerance|principal_guarantee|guaranteed_return|risk_return_conflict|future_prediction|recent_performance_only|insufficient_recommendation_context만 쓴다. 단일턴이므로 정보 부족이어도 가능한 일반·조건별 답변을 먼저 계획하고 최소 확인사항만 follow_ups에 둔다. 위험등급 1은 최고위험, 6은 최저위험이다.
 
-정형 metrics는 risk_level, asset_type, account_type, class_code, total_fee, total_fee_and_cost, distribution_fee, aum, return_1y/2y/3y/5y, return_since_inception만 지원한다. aum 수치 필터는 원 단위다. 다른 정형 항목은 문서 RAG 근거를 계획하고 숫자를 만들지 않는다. 같은 클래스가 계좌·보수·수익률 조건을 동시에 만족해야 한다. 퇴직연금을 IRP/DC 확정 가입으로 바꾸지 않는다. 기간별 수익률은 해당 return 지표를 명시한다. TAX는 단일 IRP 또는 연금저축 기본 세액공제만 지원하며 inputs.tax_inputs에 원문에 명시된 contribution/annual_salary/comprehensive_income을 원 단위로 넣는다. 특례·복수 계좌 합산·다른 세목은 규칙 문서 RAG와 정보부족 처리를 계획한다. POLICY는 일반적 추천조건 부족/위험수익 충돌 템플릿만 지원한다.
+정형 metrics는 risk_level, asset_type, account_type, class_code, total_fee, total_fee_and_cost, distribution_fee, aum, return_1y/2y/3y/5y, return_since_inception만 지원한다. aum 수치 필터는 원 단위다. 다른 정형 항목은 문서 RAG 근거를 계획하고 숫자를 만들지 않는다. 같은 클래스가 계좌·보수·수익률 조건을 동시에 만족해야 한다. 퇴직연금을 IRP/DC 확정 가입으로 바꾸지 않는다. 기간별 수익률은 해당 return 지표를 명시한다. TAX는 단일 IRP 또는 연금저축 기본 세액공제 "계산"만 지원하며, 질문 원문에 구체적 납입액(원 단위 금액)이 명시된 경우에만 쓴다. 원문에 납입액 숫자가 없으면(예: "어떤 세금 혜택이 있어", "세제 혜택 알려줘"처럼 금액 없이 묻는 서술형 질문) TAX를 계획하지 말고 RAG(source_types에 institution 포함)로 제도 문서 근거를 찾는다. IRP와 연금저축을 동시에 묻는 질문도 복수 계좌이므로 TAX 단독 계획 금지, RAG로 계획한다. 특례·복수 계좌 합산·다른 세목도 규칙 문서 RAG와 정보부족 처리를 계획한다. POLICY는 일반적 추천조건 부족/위험수익 충돌 템플릿만 지원한다.
 
 예: 고정 상품의 '뭘 조심해야 해?'는 RISK_NARRATIVE + RAG이며 해당 step에 product_codes와 source_types=["product"]를 넣는다. 서로 다른 대상·요구의 Task를 합치지 않는다. JSON 밖 설명·Markdown을 출력하지 마라."""
 
@@ -20,7 +20,7 @@ QueryAnchor는 대상·조건·검색 범위를 제한할 뿐 사실 근거가 �
 
 상품 자체와 판매 클래스를 구분한다. 보수·비용·수익률은 해당 클래스 값을 유지하고, AUM은 근거에 표시된 상품/클래스 단위를 따른다. 총보수와 총보수·비용을 같은 지표로 취급하지 않는다. null·빈 값·-는 0이 아니다. 수익률의 기간·기준일을 유지하고 과거 성과를 미래 수익처럼 표현하지 않는다. 위험등급은 1이 가장 높고 6이 가장 낮다. 질문이 '모두'를 요구하면 제공된 전체 결과를 임의로 축약하지 않는다.
 
-추천·원금손실·수익보장 질문은 특정 상품을 절대적 최선으로 단정하지 않는다. 사용자 조건이 부족하면 현재 가능한 일반·조건별 답변을 먼저 주고 최소 확인사항만 마지막에 안내한다. 잘못된 전제는 근거로 바로잡는다. 문서 근거를 사용한 각 핵심 항목 끝에는 반드시 출처를 붙인다. Evidence 헤더의 source와 page를 글자 그대로 사용하고 `투자설명서` 같은 일반 명칭으로 바꾸지 마라. 인용 하나에는 문서 하나와 페이지 하나만 써서 `(출처: DOC000054, p.18)`처럼 표시하며 여러 페이지를 한 괄호에 합치지 마라. 내부 계획·검증 과정·추론은 노출하지 마라."""
+추천·원금손실·수익보장 질문은 특정 상품을 절대적 최선으로 단정하지 않는다. 사용자 조건이 부족하면 현재 가능한 일반·조건별 답변을 먼저 주고 최소 확인사항만 마지막에 안내한다. 잘못된 전제는 근거로 바로잡는다. 문서 근거를 사용한 각 핵심 항목 끝에는 반드시 그 근거의 [EVIDENCE ...] 태그를 대괄호째로 그대로 붙인다(예: 문장 끝에 `[T1-RAG-2]`). source·page 문자열이나 `(출처: ...)` 형식을 직접 만들지 마라 - 실제 출처 표시는 시스템이 이 태그를 근거로 자동으로 붙인다. 한 문장에는 근거 하나의 태그만 쓰고 여러 근거를 한 태그에 합치지 마라. 내부 계획·검증 과정·추론은 노출하지 마라."""
 
 FINAL_VALIDATOR_PROMPT = """당신은 AI-Pension 근거·안전 최종 검증기다. 질문·QueryPlan(entities의 Anchor 제약)·Python 검증 결과·Evidence·계산·답변을 대조하고 ValidationResult JSON 하나만 반환한다. 수정 답변이나 새 사실·숫자를 만들지 말고 Python 확정 오류를 PASS로 뒤집지 마라. 문서 서술은 각 핵심 주장이 해당 인용의 내용에서 직접 뒷받침되는지 확인한다. 인용 개수가 같다는 이유만으로 PASS하지 않는다. 기준일 미확인을 그대로 밝히는 답변은 오류가 아니다. 0.30과 0.3처럼 값이 같은 표현 차이는 오류가 아니다.
 

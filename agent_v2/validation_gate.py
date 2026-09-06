@@ -33,18 +33,41 @@ RepairHandler = Callable[..., RepairResult | None]
 LlmValidator = Callable[[str, str, QueryPlan, list[Evidence], ContextBundle], ValidationResult]
 
 
+MAX_FALLBACK_DOCUMENTS = 3
+FALLBACK_EXCERPT_CHARS = 300
+
+
 def _safe_answer(evidence: list[Evidence]) -> str:
     # Do not present unvalidated generated prose or truncated raw RAG as verified.
+    # 검증된 계산 결과(TAX)는 LLM이 지어낸 문장이 아니라 Python이 규칙대로
+    # 구한 값이라, 생성 답변을 버리는 상황에서도 그대로 내보낼 수 있는
+    # 가장 확실한 근거다. 예전엔 metric·policy만 실어서 세액공제 계산이
+    # 끝났는데도 "확정할 수 없습니다"만 나갔다.
     usable = [e for e in evidence if e.data.get("verified") and
-              (e.data.get("metric") or e.kind == "policy")]
+              (e.data.get("metric") or e.kind in {"policy", "calculation"})]
     lines = ["답변 전체의 근거 연결을 충분히 검증하지 못했습니다."]
     if usable:
         lines.append("현재 구조화 자료에서 직접 확인되는 항목은 다음과 같습니다.")
         for e in usable:
             citation = e.source + (f", p.{e.page}" if e.page is not None else "")
             lines.append(f"- {e.content} (출처: {citation})")
-    else:
-        lines.append("검증되지 않은 문장을 사실로 안내하지 않겠습니다. 제공된 근거만으로 요청한 결론을 확정할 수 없습니다.")
+        return "\n".join(lines)
+
+    lines.append("검증되지 않은 문장을 사실로 안내하지 않겠습니다.")
+    # 생성된 문장은 버리되 검색된 문서 원문까지 같이 버리면 사용자에게는
+    # 아무 단서도 없는 거절만 남는다. 원문은 LLM이 지어낸 말이 아니라
+    # 실제로 찾은 자료이므로, "확정된 답이 아니라 참고 원문"이라고 분명히
+    # 구분해 출처와 함께 보여준다.
+    documents = [e for e in evidence if e.kind == "document" and (e.content or "").strip()]
+    if not documents:
+        lines.append("제공된 근거만으로 요청한 결론을 확정할 수 없습니다.")
+        return "\n".join(lines)
+    lines.append("다만 질문과 관련해 검색된 문서 원문은 아래와 같습니다. "
+                 "해석·결론이 아니라 원문 그대로이니 직접 확인해 주세요.")
+    for item in documents[:MAX_FALLBACK_DOCUMENTS]:
+        citation = item.source + (f", p.{item.page}" if item.page is not None else "")
+        excerpt = " ".join((item.content or "").split())[:FALLBACK_EXCERPT_CHARS]
+        lines.append(f"- {excerpt} (출처: {citation})")
     return "\n".join(lines)
 
 
