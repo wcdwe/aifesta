@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from scripts.product_lookup import find_products, load_products
+from scripts.product_lookup import MAX_SHARED_PRODUCTS, find_products, load_products
 
 from .schemas import ProductCandidate, ProductResolution
 
@@ -46,15 +46,38 @@ def _family_candidates(question: str) -> list[ProductCandidate]:
     # 띄어 쓰지 않은 전체 상품명 표현은 기존 matcher가 더 잘 처리한다.
     if not tokens:
         return []
+    products = load_products()
+    # 소수 상품만 가진 낱말은 그 상품군을 가리키는 고유한 이름이다("솔로몬"
+    # 4개). 그런 낱말이 질문에 있으면, 그것을 갖지 않은 상품은 후보가 아니다.
+    # 겹친 글자 수만 세면 흔한 낱말의 합만으로 엉뚱한 상품이 들어온다 -
+    # 실측: "솔로몬 국공채 단기·중장기·장기" 비교에 "국공채"(13개)+"단기"
+    # (18개)=5자만으로 키움·KB스타·한화 국공채가 후보로 끌려 들어왔다.
+    # 두 상품군을 함께 묻는 비교도 있으므로 고유 이름 "전부"가 아니라
+    # "하나라도" 있으면 후보로 남긴다.
+    matched_by_code = {}
+    for code, name, normalized_name in products:
+        matched_by_code[code] = (name, [
+            token for token in tokens if _norm(token) in normalized_name.lower()
+        ])
+    token_counts = {
+        token: sum(1 for _, matched in matched_by_code.values() if token in matched)
+        for token in tokens
+    }
+    distinctive = {
+        token for token, count in token_counts.items()
+        if 0 < count <= MAX_SHARED_PRODUCTS
+    }
     rows = []
-    for code, name, normalized_name in load_products():
-        matched = [token for token in tokens if _norm(token) in normalized_name.lower()]
-        if matched and sum(len(token) for token in matched) >= 5:
-            rows.append(ProductCandidate(
-                product_code=code,
-                product_name=name,
-                score=sum(len(token) for token in matched),
-            ))
+    for code, (name, matched) in matched_by_code.items():
+        if not matched or sum(len(token) for token in matched) < 5:
+            continue
+        if distinctive and not distinctive.intersection(matched):
+            continue
+        rows.append(ProductCandidate(
+            product_code=code,
+            product_name=name,
+            score=sum(len(token) for token in matched),
+        ))
     rows.sort(key=lambda item: (-item.score, item.product_code))
     return rows
 

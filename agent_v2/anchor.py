@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from .product_resolver import resolve_product
+from .product_resolver import _duration, _durations, resolve_product
 from .structured_request import numeric_filters
 
 from .schemas import (
@@ -44,6 +44,15 @@ def _products(question: str) -> tuple[list[ProductCandidate], str]:
                 explicit.append(item)
         if len(explicit) >= 2 and len(explicit) == len(products):
             return explicit, "multiple"
+        # 공통 이름을 한 번만 쓰고 뒤에 기간만 나열하는 표현("솔로몬 국공채
+        # 단기·중장기·장기, 뭐가 달라요?")은 전체 상품명을 적지 않았을 뿐
+        # 비교 대상을 분명히 지목한 것이다. 후보가 요청된 기간과 하나씩
+        # 짝지어지면 되묻지 않고 그 전부를 비교 대상으로 확정한다.
+        durations = _durations(question)
+        if len(durations) >= 2 and len(products) == len(durations):
+            paired = {_duration(item.product_name) for item in products}
+            if paired == set(durations):
+                return products, "multiple"
         return products, "ambiguous"
     return products, "exact" if resolved.status == "exact" else "unambiguous"
 

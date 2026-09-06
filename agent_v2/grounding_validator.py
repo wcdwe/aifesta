@@ -25,7 +25,12 @@ RE_CLASS = re.compile(
     r"(?<![A-Za-z0-9])(?:A|A-e|C|C-e|C-P|C-Pe|C-P2|C-P2e|C-RP|C-RPe|S)(?![A-Za-z0-9])",
     re.IGNORECASE,
 )
-RE_CITATION = re.compile(r"(?:출처\s*:\s*)?([^()\n,]{1,100}?),?\s*p\.?\s*(\d+)", re.IGNORECASE)
+# 출처 자리는 공백만으로 채워질 수 없다. 예전 패턴은 한 괄호에 페이지를
+# 여러 개 적었을 때("(출처: DOC000060, p.10, p.15)") 뒤쪽 ", p.15"의 출처를
+# 공백 한 칸으로 잡아, 어떤 근거와도 대조할 수 없는 빈 출처 인용을 만들어
+# 답변을 항상 반려시켰다(실측).
+RE_CITATION = re.compile(
+    r"(?:출처\s*:\s*)?([^()\n,]{0,99}[^()\n,\s]),?\s*p\.?\s*(\d+)", re.IGNORECASE)
 RE_GUARANTEE = re.compile(
     r"원금(?:이|은)?\s*(?:절대\s*)?(?:보장|손실(?:이|은)?\s*없)|"
     r"손실\s*(?:가능성이|위험이)?\s*없|수익률(?:이|은)?\s*보장"
@@ -128,6 +133,12 @@ def _uncited_claim_errors(answer: str, evidence: list[Evidence]) -> list[Validat
     for line in (answer or "").splitlines():
         text = line.strip()
         if len(text) < _MIN_CLAIM_LENGTH or _HEADING_RE.match(text):
+            continue
+        # 콜론으로 끝나는 줄은 뒤에 올 내용을 소개하는 제목이지 주장이 아니다
+        # ("1. **미래에셋솔로몬단기국공채증권자투자신탁1호(채권)**:"). 값이
+        # 실제로 붙어 있는 "- 비교지수: KIS국공채지수"는 콜론으로 끝나지
+        # 않으므로 그대로 검사한다.
+        if text.endswith((":", "：")):
             continue
         if RE_CITATION.search(text) or not _CLAIM_TERM_RE.search(text):
             continue

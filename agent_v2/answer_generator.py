@@ -24,6 +24,13 @@ _RE_EVIDENCE_TAG = re.compile(
     r"\[(?:EVIDENCE|근거)?\s*([A-Za-z0-9][A-Za-z0-9._-]*)\]", re.IGNORECASE)
 
 
+# LLM이 태그를 맨몸으로 두지 않고 "([T1-RAG-2], p.15)"처럼 괄호와 페이지를
+# 스스로 덧붙여 쓰면, 태그만 바꿔치기한 결과가 "((출처: A, p.15), p.15)"로
+# 겹친다(실측). 안쪽 인용만 남기고 LLM이 덧댄 껍데기를 걷어낸다.
+_RE_REWRAPPED_CITATION = re.compile(
+    r"\(\s*(\(출처:[^()]*\))\s*(?:,\s*p\.?\s*\d+\s*)?\)")
+
+
 def resolve_evidence_citations(answer: str, context_text: str) -> str:
     """LLM은 [T1-RAG-2] 같은 근거 ID 태그만 쓰고, 실제 "(출처: doc23, p.1)"
     문자열은 여기서 근거 헤더를 그대로 읽어 채운다. LLM이 출처 문자열을
@@ -45,7 +52,7 @@ def resolve_evidence_citations(answer: str, context_text: str) -> str:
         source, page = info
         return f"(출처: {source}, p.{page})" if page else f"(출처: {source})"
 
-    return _RE_EVIDENCE_TAG.sub(_sub, answer)
+    return _RE_REWRAPPED_CITATION.sub(r"\1", _RE_EVIDENCE_TAG.sub(_sub, answer))
 
 
 def generate_answer(
