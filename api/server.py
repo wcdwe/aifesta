@@ -56,6 +56,7 @@ from agent_v2.document_path import (  # noqa: E402
 )
 from agent_v2.structured_path import try_fast_structured  # noqa: E402
 from agent_v2.templates import build_policy_payload  # noqa: E402
+from agent_v2.orchestrator import try_agent_payload  # noqa: E402
 
 app = FastAPI(title="연금 Agent 평가용 API")
 
@@ -504,6 +505,14 @@ def answer_payload(question_id: str, question: str) -> dict:
         institution_body = try_simple_institution_document(question_id, question)
         if institution_body is not None:
             return institution_body
+
+    # Fast Path로 확정되지 않은 복합 질문은 Agent v2가 QueryPlan을 만들고
+    # 도구·근거·검증 게이트까지 한 번에 실행한다. 분석기나 생성기를 쓸 수
+    # 없는 환경에서는 None을 반환해 아래의 검증된 기존 경로를 유지한다.
+    if pre_decision.route == "AGENT":
+        agent_body = try_agent_payload(question_id, question)
+        if agent_body is not None:
+            return agent_body
 
     # 상품을 이름으로도 찾는다. 예전엔 질의에 상품코드(KR...)가 문자
     # 그대로 있을 때만 인식해서, "미래에셋장기성장포커스 총보수 얼마야?"

@@ -15,6 +15,10 @@ from agent_v2.grounding_validator import validate_grounding
 from agent_v2.schemas import ContextBundle, Evidence, QueryPlan, ValidationResult
 from agent_v2.validation_gate import RepairResult, run_validation_gate
 from agent_v2.validator_llm import parse_validation
+from agent_v2.answer_generator import GenerationOutcome
+from agent_v2.orchestrator import try_agent_payload
+from agent_v2.query_analyzer import AnalysisOutcome
+from agent_v2.schemas import ToolExecutionResult
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
 
@@ -281,10 +285,101 @@ class ValidationGateTests(unittest.TestCase):
         self.assertTrue(outcome.used_safe_fallback)
         self.assertIn("검증을 통과한 범위", outcome.answer)
 
+    def test_repaired_context_is_returned_by_gate(self):
+        repaired_evidence = [Evidence(
+            evidence_id="E2", kind="structured", content="위험등급은 2등급입니다.",
+            source="product_master",
+        )]
+        repaired_context = ContextBundle(
+            text=repaired_evidence[0].content, evidence_ids=["E2"]
+        )
+        outcome = run_validation_gate(
+            "위험등급 알려줘", "위험등급은 1등급입니다.",
+            QueryPlan(intents=["상품설명"]), self.evidence, self.context,
+            repair_handler=lambda *_args: RepairResult(
+                "위험등급은 2등급입니다.", repaired_evidence, repaired_context
+            ),
+        )
+        self.assertEqual(outcome.status, "PASS")
+        self.assertEqual(outcome.context.evidence_ids, ["E2"])
+
     def test_invalid_validator_json_fails_closed(self):
         result = parse_validation("PASS")
         self.assertEqual(result.status, "FAIL")
         self.assertEqual(result.retry_action, "SAFE_FALLBACK")
+
+
+class OrchestratorTests(unittest.TestCase):
+    def _analysis(self, intents=None):
+        return AnalysisOutcome(
+            QueryPlan(
+                intents=intents or ["비교"], required_facts=["위험등급"],
+                tools=["COMPARE"],
+                plan=[{"step": 1, "tool": "COMPARE", "purpose": "비교", "depends_on": []}],
+            ),
+            "테스트 계획",
+        )
+
+    @staticmethod
+    def _execution(_question, _plan):
+        evidence = [Evidence(
+            evidence_id="C1", kind="structured",
+            content="상품 A 위험등급 3등급, 상품 B 위험등급 4등급",
+            source="structured_store.db",
+        )]
+        return ToolExecutionResult(
+            status="PASS", tool_results={"COMPARE": "비교 결과"}, evidence=evidence,
+        )
+
+    def test_agent_connects_plan_tools_context_generation_and_gate(self):
+        body = try_agent_payload(
+            "Q-1", "상품 A와 B 위험등급을 비교해줘",
+            analyzer=lambda _q: self._analysis(), executor=self._execution,
+            generator=lambda *_args, **_kwargs: GenerationOutcome(
+                "상품 A는 위험등급 3등급이고 상품 B는 4등급입니다.", "가짜 생성"
+            ),
+        )
+        self.assertIsNotNone(body)
+        self.assertEqual(body["route"], "agent_v2")
+        self.assertIn("상품 A", body["answer"])
+        self.assertIn("Python 근거·안전 검증: PASS", body["think_trace"])
+        self.assertTrue(all(isinstance(body[key], str) for key in (
+            "question_id", "question", "retrieved_context", "think_trace", "answer"
+        )))
+
+    def test_analysis_failure_falls_back_to_legacy_path(self):
+        body = try_agent_payload(
+            "Q-2", "질문",
+            analyzer=lambda _q: AnalysisOutcome(None, "분석 실패"),
+        )
+        self.assertIsNone(body)
+
+    def test_generation_failure_falls_back_to_legacy_path(self):
+        body = try_agent_payload(
+            "Q-3", "상품 A와 B 비교",
+            analyzer=lambda _q: self._analysis(), executor=self._execution,
+            generator=lambda *_args, **_kwargs: GenerationOutcome(None, "생성 실패"),
+        )
+        self.assertIsNone(body)
+
+    def test_high_risk_agent_uses_validator(self):
+        calls = []
+
+        def validator(*_args):
+            calls.append(True)
+            return ValidationResult(status="PASS", retry_action="NONE", errors=[])
+
+        body = try_agent_payload(
+            "Q-4", "두 상품 중 조건에 맞는 후보를 추천해줘",
+            analyzer=lambda _q: self._analysis(["조건부추천"]), executor=self._execution,
+            generator=lambda *_args, **_kwargs: GenerationOutcome(
+                "상품 A는 위험등급 3등급이고 상품 B는 4등급입니다.", "가짜 생성"
+            ),
+            llm_validator=validator,
+        )
+        self.assertIsNotNone(body)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("고위험 검증 LLM: PASS", body["think_trace"])
 
 
 class QueryAnalyzerTests(unittest.TestCase):

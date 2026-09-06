@@ -21,6 +21,8 @@ class GateOutcome:
     answer: str
     status: str
     risk: RiskDecision
+    evidence: list[Evidence]
+    context: ContextBundle
     python_validation: ValidationResult
     llm_validation: ValidationResult | None
     retry_count: int
@@ -80,6 +82,7 @@ def run_validation_gate(
         if py_result.status == "FAIL":
             return GateOutcome(
                 answer=_safe_answer(current_evidence), status="SAFE_FALLBACK", risk=risk,
+                evidence=current_evidence, context=current_context,
                 python_validation=py_result, llm_validation=None,
                 retry_count=retry_count, used_safe_fallback=True,
             )
@@ -87,6 +90,7 @@ def run_validation_gate(
     if not risk.requires_llm_validation:
         return GateOutcome(
             answer=current_answer, status="PASS", risk=risk,
+            evidence=current_evidence, context=current_context,
             python_validation=py_result, llm_validation=None,
             retry_count=retry_count, used_safe_fallback=False,
         )
@@ -97,6 +101,7 @@ def run_validation_gate(
     if llm_result.status == "PASS":
         return GateOutcome(
             answer=current_answer, status="PASS", risk=risk,
+            evidence=current_evidence, context=current_context,
             python_validation=py_result, llm_validation=llm_result,
             retry_count=retry_count, used_safe_fallback=False,
         )
@@ -120,12 +125,14 @@ def run_validation_gate(
                 if llm_result.status == "PASS":
                     return GateOutcome(
                         answer=current_answer, status="PASS", risk=risk,
+                        evidence=current_evidence, context=current_context,
                         python_validation=py_result, llm_validation=llm_result,
                         retry_count=retry_count, used_safe_fallback=False,
                     )
 
     return GateOutcome(
         answer=_safe_answer(current_evidence), status="SAFE_FALLBACK", risk=risk,
+        evidence=current_evidence, context=current_context,
         python_validation=py_result, llm_validation=llm_result,
         retry_count=retry_count, used_safe_fallback=True,
     )
