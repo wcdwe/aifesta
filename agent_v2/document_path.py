@@ -155,9 +155,18 @@ def _usable(hit: dict) -> bool:
 
 def retrieve_document_hits(question: str, doc_type: str,
                            product_code: str | None = None,
-                           k: int = 10) -> list[dict]:
-    semantic = semantic_search(question, k=k, doc_type=doc_type, product_code=product_code)
-    lexical = lexical_search(question, k=k, doc_type=doc_type, product_code=product_code)
+                           k: int = 10, fact_types: list[str] | None = None) -> list[dict]:
+    # 문서에는 붙여 쓴 행위명("중도해지")이 많지만 사용자는
+    # "중도에 해지"처럼 조사와 함께 자연스럽게 묻는다. 검색 직전에만
+    # 같은 의미의 표준 행위명으로 정규화하고 사용자 원문은 보존한다.
+    search_question = re.sub(r"중도\s*(?:에|로)?\s*해지", "중도해지", question or "")
+    facts = set(fact_types or [])
+    if "RISK_NARRATIVE" in facts:
+        search_question += " 주요 투자위험 손실 위험요인"
+    if "INVESTMENT_STRATEGY" in facts or "STRATEGY" in facts:
+        search_question += " 투자목적 투자전략"
+    semantic = semantic_search(search_question, k=max(k, 8), doc_type=doc_type, product_code=product_code)
+    lexical = lexical_search(search_question, k=max(k, 8), doc_type=doc_type, product_code=product_code)
     pooled: dict[tuple, dict] = {}
     for ranked in (semantic, lexical):
         for rank, hit in enumerate(ranked):
@@ -166,23 +175,36 @@ def retrieve_document_hits(question: str, doc_type: str,
             current["rrf"] = current.get("rrf", 0.0) + 1.0 / (61 + rank)
             current["score"] = max(current.get("score") or 0.0, hit.get("score") or 0.0)
     hits = [hit for hit in pooled.values() if _usable(hit)]
-    section_pattern = _RISK_SECTION if re.search(r"위험|원금", question) else _STRATEGY_SECTION
+    # 투자전략/위험 섹션 가산은 상품 투자설명서에만 적용한다. 제도 문서에
+    # 적용하면 세제·절차 질문에서도 우연히 해당 표현이 든 페이지가 앞선다.
+    section_pattern = None
+    if doc_type == "product":
+        section_pattern = _RISK_SECTION if "RISK_NARRATIVE" in facts else (
+            _STRATEGY_SECTION if facts & {"INVESTMENT_STRATEGY", "STRATEGY"} else None)
+    tax_result_needed = bool(
+        re.search(r"세금|과세|소득세", search_question)
+        and re.search(r"해지|인출|수령", search_question)
+    )
     hits.sort(
         key=lambda hit: (
-            1 if section_pattern.search(hit.get("text") or "") else 0,
-            topic_coverage(hit, question), hit.get("rrf", 0.0), hit.get("score", 0.0),
+            1 if section_pattern and section_pattern.search(hit.get("text") or "") else 0,
+            1 if tax_result_needed and re.search(
+                r"기타소득세|연금소득세|퇴직소득세|이자소득세|배당소득세|분리과세",
+                hit.get("text") or "",
+            ) else 0,
+            topic_coverage(hit, search_question), hit.get("rrf", 0.0), hit.get("score", 0.0),
         ),
         reverse=True,
     )
     # 같은 페이지의 인접 청크 반복을 막는다.
     pages, deduped = set(), []
     for hit in hits:
-        page_key = (hit.get("doc_id"), hit.get("page"))
+        page_key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"), hit.get("text"))
         if page_key in pages:
             continue
         pages.add(page_key)
         deduped.append(hit)
-    return deduped[:6]
+    return deduped[:k]
 
 
 def _context(hits: list[dict]) -> str:
@@ -217,7 +239,7 @@ def _topic_bonus(question: str, window: str) -> float:
 # 절차 안내나 무관한 목차도 다시 유리해지므로, 질문이 실제로 조건·사유를
 # 묻을 때만, 그리고 그 목록이 여러 항목을 담고 있을 때만 가산한다.
 _CONDITIONS_QUESTION_RE = re.compile(r"어떤\s*경우|어느\s*경우|무슨\s*경우|조건|사유|언제\s*가능")
-_LIST_ITEM_RE = re.compile(r"(?:^|[\s\)\]])\d{1,2}[.)]\s*\S")
+_LIST_ITEM_RE = re.compile(r"(?:^|[\s\)\]])(?:\d{1,2}[.)]\s*|[-•▶]\s+)\S")
 # 이 코퍼스의 FAQ 문서들이 답을 시작할 때 쓰는 표지. 대부분 "▶"를 쓰고
 # (doc27/doc55 등), 일부는 "•"(doc14 계열)나 "☞"(doc9 등)를 쓴다 - 문서
 # 하나에 맞춘 게 아니라 실제로 관찰된 여러 표지를 모은 것이다.
@@ -472,7 +494,7 @@ def try_simple_product_document(question_id: str, question: str) -> dict | None:
         "question": str(question),
         "retrieved_context": context,
         "think_trace": (
-            "1. Python Pre-router: SIMPLE_DOCUMENT\n"
+            "1. Agent fallback: PRODUCT_RAG\n"
             f"2. 상품 식별: {resolution.status} - {candidate.product_code} "
             f"({candidate.product_name})\n"
             f"3. 상품 문서 Hybrid RAG: 사실별 검색, 비본문 제외, 실제 사용 근거 {len(hits)}건\n"
@@ -499,7 +521,7 @@ def try_simple_institution_document(question_id: str, question: str) -> dict | N
             "question": str(question),
             "retrieved_context": str(summary),
             "think_trace": (
-                "1. Python Pre-router: SIMPLE_DOCUMENT\n"
+                "1. Agent fallback: INSTITUTION_FACT\n"
                 "2. institution_facts 원자적 사실 조회: HIT\n"
                 f"3. Python 근거 검증: PASS (근거 {len(evidence)}건)\n"
                 "4. 승인된 사실 템플릿 사용; LLM 호출 없음"
@@ -531,7 +553,7 @@ def try_simple_institution_document(question_id: str, question: str) -> dict | N
         "question": str(question),
         "retrieved_context": context,
         "think_trace": (
-            "1. Python Pre-router: SIMPLE_DOCUMENT\n"
+            "1. Agent fallback: INSTITUTION_RAG\n"
             "2. institution_facts 원자적 사실 조회: MISS\n"
             f"3. 제도·절차 Hybrid RAG: 표지·목차 제외, 페이지 중복 제거, 근거 {len(hits)}건\n"
             f"4. 답변 생성·검증: {how}"

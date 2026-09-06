@@ -20,6 +20,7 @@ def generate_answer(
     context: ContextBundle,
     errors: list[ValidationErrorItem] | None = None,
     max_tokens: int = 900,
+    previous_answer: str | None = None,
 ) -> GenerationOutcome:
     if not is_configured():
         return GenerationOutcome(None, "HCX 키가 없어 답변 생성 생략")
@@ -32,10 +33,13 @@ def generate_answer(
             for item in errors[:8]
         )
         correction = f"\n\n이전 답변의 아래 오류만 고쳐 새 답변을 작성하라.\n{items}"
+        if previous_answer:
+            correction += f"\n<이전 답변>\n{previous_answer}\n</이전 답변>"
     user = (
         f"<질문>\n{question}\n</질문>\n"
         f"<실행계획>\n{plan.model_dump_json()}\n</실행계획>\n"
         f"<근거>\n{context.text}\n</근거>"
+        f"\n<근거 한계>예산으로 제외된 Task={context.missing_task_ids}; 이 요구는 확인불가로 명시하고 추측하지 마라.</근거 한계>"
         f"{correction}"
     )
     try:
@@ -46,6 +50,7 @@ def generate_answer(
             ],
             max_tokens=max_tokens,
             temperature=0.1,
+            stage="repair_generator" if errors else "generator",
         )
     except HcxError as exc:
         return GenerationOutcome(None, f"HCX 답변 생성 실패: {exc}")

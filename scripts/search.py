@@ -24,6 +24,8 @@ import math
 import os
 import re
 import sqlite3
+import logging
+from functools import lru_cache
 
 try:
     import chromadb
@@ -74,12 +76,24 @@ def semantic_search(query, k=5, doc_type=None, product_code=None, provider_name=
             if product_code:
                 where["product_code"] = product_code
             result = collection.query(query_embeddings=[query_embedding], n_results=k, where=where or None)
-            return [{"chunk_id": cid, "text": doc, "score": 1 - dist, **meta}
+            return [{"chunk_id": cid, "text": doc, "score": 1 - dist, **meta, "retrieval_backend": "chroma"}
                     for doc, meta, dist, cid in zip(result["documents"][0], result["metadatas"][0],
                                                    result["distances"][0], result["ids"][0])]
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger("agent_v2.audit").info("Chroma fallback: %s", type(exc).__name__)
     return _flat_semantic_search(query, k, doc_type, product_code)
+
+
+@lru_cache(maxsize=1)
+def _load_flat_index(vector_path, metadata_path, state_path, revision):
+    import numpy as np
+    provider = get_provider("tfidf")
+    provider.load(state_path)
+    vectors = np.load(vector_path, mmap_mode="r")
+    with open(metadata_path, encoding="utf-8") as f:
+        metadata = json.load(f)
+    if len(vectors) != len(metadata): raise RuntimeError("Vector/metadata row count mismatch")
+    return provider, vectors, metadata
 
 
 def _flat_semantic_search(query, k, doc_type, product_code):
@@ -89,12 +103,9 @@ def _flat_semantic_search(query, k, doc_type, product_code):
     state_path = os.path.join(FLAT_STORE_DIR, "embedding_provider.pkl")
     if not all(os.path.exists(p) for p in (vector_path, metadata_path, state_path)):
         raise RuntimeError("No usable semantic index. Run integration/build_flat_vector_store.py")
-    provider = get_provider("tfidf")
-    provider.load(state_path)
+    revision = tuple((os.stat(p).st_mtime_ns, os.stat(p).st_size) for p in (vector_path, metadata_path, state_path))
+    provider, vectors, metadata = _load_flat_index(vector_path, metadata_path, state_path, revision)
     query_vector = np.asarray(provider.embed([query], is_query=True)[0], dtype=np.float32)
-    vectors = np.load(vector_path, mmap_mode="r")
-    with open(metadata_path, encoding="utf-8") as f:
-        metadata = json.load(f)
     candidates = []
     for index, meta in enumerate(metadata):
         if doc_type and meta.get("doc_type") != doc_type:
@@ -106,7 +117,8 @@ def _flat_semantic_search(query, k, doc_type, product_code):
             score *= 0.5
         candidates.append((score, meta))
     candidates.sort(key=lambda item: item[0], reverse=True)
-    return [{"score": score, "product_code": meta.get("canonical_product_code"), **meta}
+    return [{"score": score, "product_code": meta.get("canonical_product_code"), **meta,
+             "retrieval_backend": "flat_tfidf_svd"}
             for score, meta in candidates[:k]]
 
 

@@ -50,6 +50,7 @@ import tax_calculator  # noqa: E402
 import product_ranking  # noqa: E402
 import institution_facts  # noqa: E402
 from agent_v2.pre_router import pre_route  # noqa: E402
+from agent_v2.anchor import extract_anchor  # noqa: E402
 from agent_v2.document_path import (  # noqa: E402
     asks_for_conditions,
     has_action_term_overlap,
@@ -517,233 +518,10 @@ def generate_answer(query: str, route_result: dict):
 
 
 def answer_payload(question_id: str, question: str) -> dict:
-    """질의 하나에 대한 응답 본문을 만든다.
+    from agent_v2.runtime import answer_payload as unified_answer_payload
+    return unified_answer_payload(question_id, question)
 
-    /answer 핸들러에서 떼어낸 이유: 답변 품질을 검증하려면 서버를 띄우지
-    않고도 실제 답변 경로를 그대로 호출할 수 있어야 한다(scripts/eval_answers.py).
-    검증이 실제와 다른 코드를 지나가면 검증이 아니다.
 
-    route 필드는 어느 경로로 답했는지(comparison/single_product/rag)를
-    남긴다. 응답 스펙에 없는 필드라 /answer에서는 빼고 내보낸다."""
-    blocked = input_guard.check(question_id, question)
-    if blocked is not None:
-        return blocked
-
-    # Agent v2 Fast Path의 첫 연결점. 현재는 의미가 명확하고 기존 경로가
-    # 위험한 상품을 단정 추천할 수 있는 추천 조건 충돌만 조기 처리한다.
-    # 나머지 새 라우팅은 독립 테스트가 끝날 때까지 기존 경로를 유지한다.
-    pre_decision = pre_route(question)
-    if pre_decision.route == "FAST_POLICY":
-        return build_policy_payload(question_id, question, pre_decision)
-    if pre_decision.route == "FAST_STRUCTURED":
-        structured_body = try_fast_structured(question_id, question)
-        if structured_body is not None:
-            return structured_body
-    if pre_decision.route == "FAST_FILTER":
-        filter_body = try_fast_filter(question_id, question)
-        if filter_body is not None:
-            return filter_body
-    if pre_decision.route == "FAST_COMPARE":
-        compare_body = try_fast_compare(question_id, question)
-        if compare_body is not None:
-            return compare_body
-    if pre_decision.route == "SIMPLE_DOCUMENT":
-        document_body = try_simple_product_document(question_id, question)
-        if document_body is not None:
-            return document_body
-
-    # 세제 계산 질의(세액공제/연금소득세/퇴직소득세감면/기타소득세)는
-    # 상품과 무관하고 답이 순전히 규칙 계산이라, 상품 조회·검색보다
-    # 먼저 본다 - 계산에 필요한 숫자(금액/나이/연차)를 질문에서 못 찾으면
-    # None을 돌려주므로, 여기 안 걸리면 그냥 아래 경로로 그대로 이어진다.
-    tax_summary, tax_evidence = tax_calculator.answer_from_question(question)
-    if tax_summary is not None:
-        answer, how = compose_answer(question, tax_summary, tax_summary)
-        return {
-            "question_id": question_id,
-            "question": question,
-            "retrieved_context": tax_summary,
-            "think_trace": (
-                "1. 질의 분류: 세제 계산 (질문에서 계산에 필요한 금액/나이/연차 인식)\n"
-                f"   - 계산 근거(세율·한도 출처): {tax_evidence}\n"
-                "2. semantic_search 대신 세제 규칙 계산기(tax_calculator) 직접 계산\n"
-                f"3. 답변 생성: {how}"
-            ),
-            "answer": answer,
-            "route": "tax_calculation",
-        }
-
-    # 단순 제도·절차 질문은 질의 분석 LLM 전에 처리한다. 원자적 사실 DB에
-    # 있으면 0회 LLM, 없으면 institution 문서 RAG와 답변 생성 1회 경로다.
-    if pre_decision.route == "SIMPLE_DOCUMENT":
-        institution_body = try_simple_institution_document(question_id, question)
-        if institution_body is not None:
-            return institution_body
-
-    # Fast Path로 확정되지 않은 복합 질문은 Agent v2가 QueryPlan을 만들고
-    # 도구·근거·검증 게이트까지 한 번에 실행한다. 분석기나 생성기를 쓸 수
-    # 없는 환경에서는 None을 반환해 아래의 검증된 기존 경로를 유지한다.
-    if pre_decision.route == "AGENT":
-        agent_body = try_agent_payload(question_id, question)
-        if agent_body is not None:
-            return agent_body
-
-    # 상품을 이름으로도 찾는다. 예전엔 질의에 상품코드(KR...)가 문자
-    # 그대로 있을 때만 인식해서, "미래에셋장기성장포커스 총보수 얼마야?"
-    # 같은 실제 질문이 구조화 DB에 못 닿고 텍스트 검색으로 빠졌다.
-    # 랭킹 질의 판단보다 먼저 하는 이유: "솔로몬 단기·중장기·장기
-    # 국공채 중 위험도가 가장 낮은 상품은?"처럼 "여러 상품 중에서"가
-    # 카테고리가 아니라 이름으로 지목한 상품들을 가리킬 수 있어서,
-    # 랭킹 쪽에 그 상품코드들을 넘겨줘야 한다.
-    hits = find_products(question)
-    product_codes = [h[0] for h in hits]
-    analysis, analysis_how = (None, "규칙 기반 상품명 매칭으로 이미 찾아 LLM 질의분석 생략")
-    if not product_codes:
-        # 규칙 기반 이름 매칭이 하나도 못 찾았을 때만 LLM 질의분석을
-        # 부른다 - 이미 찾았으면 토큰을 쓸 이유가 없다. HCX가 뽑은
-        # entities.product_names로 find_products를 다시 시도해서, 질문
-        # 원문 표현이 상품명과 너무 달라(줄임말/오탈자) 규칙 매칭이
-        # 놓친 경우를 보강한다.
-        analysis, analysis_how = query_analyzer.analyze(question)
-        if analysis:
-            for cand in analysis.get("entities", {}).get("product_names", []):
-                for code, name, n in find_products(cand):
-                    if code not in product_codes:
-                        product_codes.append(code)
-                        hits.append((code, name, n))
-
-    # 제도 비교/사실 질의(DB·DC·IRP·연금저축의 운용주체/부담금/손실부담/
-    # 가입대상/중도인출/이전전환/세액공제/위험자산한도 등)는 상품과
-    # 무관하고 원자적 사실 하나로 답이 정해지므로 상품 조회 다음(상품이
-    # 하나도 안 걸렸을 때)에 본다. product_codes가 이미 있으면 건너뛴다 -
-    # "연금저축용 클래스는 뭐야?"처럼 상품 질문에 "연금저축"이 섞여
-    # 있으면 subject 인식만으로 이 경로를 먼저 타서 상품 질문을 통째로
-    # 가로챈 적이 있다(실측, PROD-22 회귀).
-    #
-    # RAG는 TF-IDF 코퍼스가 바뀔 때마다 순위가 재계산돼 같은 질문의
-    # 답이 흔들릴 수 있는데(실측: institution 문서 2개를 추가했더니
-    # "DC와 DB 운용주체 차이"의 1등 근거가 통째로 바뀌었다), 이 경로는
-    # 문서에서 직접 확인해 둔 값만 그대로 꺼내 쓰므로 그 위험이 없다.
-    # subject(DB/DC/IRP/연금저축)나 predicate를 하나도 못 알아보면
-    # None이라 아래 경로로 그대로 이어진다.
-    if not product_codes:
-        inst_summary, inst_evidence = institution_facts.institution_facts_answer(question)
-        if inst_summary is not None:
-            answer, how = compose_answer(question, inst_summary, inst_summary)
-            return {
-                "question_id": question_id,
-                "question": question,
-                "retrieved_context": inst_summary,
-                "think_trace": (
-                    "1. 질의 분류: 제도 비교/사실 질의 "
-                    f"(인식된 제도: {institution_facts.detect_subjects(question)})\n"
-                    "2. semantic_search 대신 institution_facts.json(원자적 사실) 직접 조회\n"
-                    f"   - 조회 근거: {inst_evidence[:6]}\n"
-                    f"3. 답변 생성: {how}"
-                ),
-                "answer": answer,
-                "route": "institution_facts",
-            }
-
-    # 여러 상품을 조건으로 걸러 정렬하는 질의("총보수가 가장 낮은 상품
-    # 5개", "위험등급 4 이하이고 총보수가 낮은 상품", "솔로몬 셋 중
-    # 위험도가 가장 낮은 상품은?")는 랭킹을 비교보다 먼저 본다 - "중에서
-    # 가장 낮은/제일 좋은 하나"를 묻는 건 나란히 늘어놓는 비교가 아니라
-    # 하나를 골라내라는 뜻이라, is_comparison_query가 상품코드 2개
-    # 이상이면 그냥 True를 주는 것과 충돌한다. product_codes가 2개
-    # 이상이면 그 상품들 안에서만, 아니면(카테고리 질문이라 이름으로는
-    # 못 찾음) 코퍼스 전체에서 정렬한다.
-    rank_conditions = product_ranking.detect(question)
-    if rank_conditions is not None:
-        named = product_codes if len(product_codes) >= 2 else None
-        summary, evidence = product_ranking.rank_products(rank_conditions, named_codes=named)
-        answer, how = compose_answer(question, summary, summary)
-        return {
-            "question_id": question_id,
-            "question": question,
-            "retrieved_context": summary,
-            "think_trace": (
-                f"1. 질의 분류: 상품 랭킹/조건 검색 (조건: {rank_conditions})\n"
-                + (f"   - 질문에서 지목한 상품코드: {product_codes}\n" if named else "")
-                + "2. semantic_search 대신 구조화 DB(product_master/class_fees/"
-                "class_returns/fund_aum)를 조건으로 걸러 정렬 (일반 고객이 "
-                "가입 가능한 클래스만 사용)\n"
-                f"   - 조회 근거: {evidence[:5]}\n"
-                f"3. 답변 생성: {how}"
-            ),
-            "answer": answer,
-            "route": "ranking",
-        }
-
-    if is_comparison_query(question, product_codes) and len(product_codes) >= 2:
-        summary, evidence = compare_products(product_codes)
-        answer, how = compose_answer(question, summary, summary)
-        body = {
-            "question_id": question_id,
-            "question": question,
-            "retrieved_context": summary,
-            "think_trace": (
-                "1. 질의 분류: 상품 비교 (상품코드 2개 이상 인식)\n"
-                f"   - 인식된 상품코드: {product_codes}\n"
-                f"{_analysis_trace_line(analysis, analysis_how)}\n"
-                "2. semantic_search 대신 구조화 DB(product_master/class_fees/"
-                "class_returns) 직접 조회로 처리 (토큰 절약)\n"
-                f"   - 조회 근거: {evidence}\n"
-                f"3. 답변 생성: {how}"
-            ),
-            "answer": answer,
-            "route": "comparison",
-        }
-        return body
-
-    # 상품 하나에 대한 정량 질문(총보수/수익률/위험등급/규모)은 구조화
-    # DB에서 바로 답한다. 텍스트 청크로 답하면 숫자가 청크 경계에 잘리거나
-    # 다른 클래스 값을 집어올 수 있는데, 이 표들은 이미 클래스 단위로
-    # 정확히 뽑아 두었다.
-    if len(product_codes) == 1:
-        intents = detect_intents(question)
-        if set(intents) & {"fee", "return", "risk", "aum", "cost_projection",
-                          "fee_breakdown", "eligibility", "identity"}:
-            code = product_codes[0]
-            summary, ev = product_facts(code, find_class_code(question), intents)
-            answer, how = compose_answer(question, summary, summary)
-            body = {
-                "question_id": question_id,
-                "question": question,
-                "retrieved_context": summary,
-                "think_trace": (
-                    f"1. 질의 분류: 단일 상품 정량 질의 (의도: {intents})\n"
-                    f"   - 인식된 상품: {code} ({hits[0][1]})\n"
-                    f"   - 지목된 클래스: {find_class_code(question) or '없음(전체)'}\n"
-                    f"{_analysis_trace_line(analysis, analysis_how)}\n"
-                    "2. semantic_search 대신 구조화 DB(product_master/class_fees/"
-                    "class_returns/fund_aum) 직접 조회\n"
-                    f"   - 조회 근거: {ev[:5]}\n"
-                    f"3. 답변 생성: {how}"
-                ),
-                "answer": answer,
-                "route": "single_product",
-            }
-            return body
-
-    from router import route_search  # 벡터 검색은 여기서만 필요하다
-
-    # k=5로는 후보가 너무 얕다. 청크가 2만 개가 넘는데 검색기마다 5개씩만
-    # 받으면 순위 합산(RRF)이 고를 게 없다. 검증 세트에서 k를 10으로 올리자
-    # 정답이 든 청크가 상위 6개 안에 들어오는 질문이 늘었다. 답변에 실제로
-    # 넣는 청크 수는 MAX_CONTEXT_CHUNKS로 여전히 6개라 토큰은 안 늘어난다.
-    route_result = route_search(question, k=10)
-    answer, how = generate_answer(question, route_result)
-    return {
-        "question_id": question_id,
-        "question": question,
-        "retrieved_context": format_retrieved_context(route_result, question),
-        "think_trace": (format_think_trace(question, route_result)
-                        + f"\n{_analysis_trace_line(analysis, analysis_how)}"
-                        + f"\n4. 답변 생성: {how}"),
-        "answer": answer,
-        "route": "rag",
-    }
 
 
 @app.get("/answer")
@@ -762,9 +540,14 @@ def answer(question_id: str, question: str):
             f"호출 {usage.calls}회, 실패 {usage.failed_calls}회, "
             f"입력 약 {usage.estimated_input_tokens}토큰, "
             f"출력 약 {usage.estimated_output_tokens}토큰"
+            f"; HTTP 시도 {usage.http_attempts}회; 실제 usage 수신 {usage.actual_usage_responses}회"
+            f" (수신분 입력 {usage.actual_input_tokens}, 출력 {usage.actual_output_tokens})"
+            f"; 단계별 호출 {dict(usage.calls_by_stage)}"
         )
         validated = validate_api_response(body)
     except Exception as exc:
+        import logging
+        logging.getLogger("agent_v2.audit").error("API failure: %s", type(exc).__name__)
         # 내부 경로·키·원문 데이터는 응답에 노출하지 않는다. 5xx를 반환해
         # 평가 서버가 일시 장애로 판단하고 재시도할 수 있게 한다.
         raise HTTPException(status_code=503, detail="일시적인 처리 오류입니다.") from exc

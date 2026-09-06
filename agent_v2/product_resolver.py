@@ -60,6 +60,16 @@ def _family_candidates(question: str) -> list[ProductCandidate]:
 
 
 def resolve_product(question: str) -> ProductResolution:
+    code_mentions = re.findall(r"KR[A-Z0-9]{10}", question, re.I)
+    if code_mentions:
+        catalog = {code: name for code, name, _ in load_products()}
+        missing = [code for code in code_mentions if code.upper() not in catalog]
+        if missing:
+            return ProductResolution(status="not_found", raw_text=question, reason="등록되지 않은 명시 상품코드")
+        unique = list(dict.fromkeys(code.upper() for code in code_mentions))
+        return ProductResolution(status="exact" if len(unique) == 1 else "ambiguous", raw_text=question,
+            candidates=[ProductCandidate(product_code=code, product_name=catalog[code], score=100) for code in unique],
+            reason="명시 상품코드 일치")
     raw_hits = find_products(question, limit=20)
     candidates = [
         ProductCandidate(product_code=code, product_name=name, score=score)

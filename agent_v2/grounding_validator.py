@@ -14,6 +14,7 @@ from scripts.answer_llm import (
 from .schemas import (
     ContextBundle,
     Evidence,
+    MissingEvidenceQuery,
     QueryPlan,
     ValidationErrorItem,
     ValidationResult,
@@ -61,18 +62,65 @@ def _source_page_pairs(evidence: Iterable[Evidence]) -> set[tuple[str, int]]:
 def _citation_errors(answer: str, evidence: list[Evidence]) -> list[ValidationErrorItem]:
     available = _source_page_pairs(evidence)
     errors: list[ValidationErrorItem] = []
+    if any(item.kind == "document" for item in evidence) and not RE_CITATION.search(answer or ""):
+        errors.append(_error(
+            "근거 완전성",
+            "문서 기반 핵심 주장에 출처·페이지가 연결되지 않음",
+            "각 핵심 주장 끝에 실제 Evidence의 source와 page를 하나씩 표시",
+        ))
+        return errors
     for source, page_text in RE_CITATION.findall(answer or ""):
         page = int(page_text)
         normalized = source.strip(" []").lower()
-        if not any(
-            page == p and (normalized == s or normalized in s or s in normalized)
-            for s, p in available
-        ):
+        if not any(page == p and normalized == s for s, p in available):
             errors.append(_error(
                 "근거 완전성",
                 f"답변의 출처·페이지를 검색 근거에서 확인할 수 없음: {source.strip()}, p.{page}",
                 "실제 검색된 문서명과 페이지로 고치거나 해당 인용을 제거",
             ))
+    return errors
+
+
+def _bound_claim_errors(answer, evidence):
+    """Check each cited clause against its own evidence, not the union of values.
+
+    This is a numeric/source check, not a proof of semantic entailment; document
+    synthesis additionally goes through the semantic validation gate.
+    """
+    errors = []
+    for match in re.finditer(r"([^\n]+?)\(출처:\s*([^(),]+),\s*p\.?\s*(\d+)\)", answer):
+        clause, source, page = match[1], match[2].strip().lower(), int(match[3])
+        scoped = [e for e in evidence if e.page == page and
+                  source in {e.source.lower(), e.source.replace('\\', '/').rsplit('/', 1)[-1].lower()}]
+        if not scoped: continue  # handled by the citation validator
+        mentioned_codes = set(re.findall(r"KR[A-Z0-9]{10}", clause))
+        if mentioned_codes:
+            scoped = [e for e in scoped if not e.product_code or e.product_code in mentioned_codes]
+        # Numeric tokens in product names are identifiers, not asserted values.
+        cleaned = clause
+        for ev in evidence:
+            name = ev.data.get("product_name")
+            if name: cleaned = cleaned.replace(name, "")
+        local_text = "\n".join(e.content + " " + str(e.data) for e in scoped)
+        bad = check_numbers(cleaned, local_text)
+        if bad or not scoped:
+            errors.append(_error("정확성", f"주장에 연결된 상품·출처 범위와 수치 불일치: {bad}",
+                                 "해당 상품·클래스·지표의 직접 근거로 수치와 인용을 함께 수정"))
+    # Typed facts permit stricter metric binding for common numeric claims.
+    patterns = {"risk_level": r"위험\s*등급\s*(?:은|이|:)?\s*([1-6])\s*등급",
+                "total_fee": r"총\s*보수(?![·ㆍ\s]*비용)\s*(?:은|는|:)?\s*(?:연\s*)?([0-9.]+)\s*%",
+                "total_fee_and_cost": r"총\s*보수[·ㆍ\s]*비용\s*(?:은|는|:)?\s*([0-9.]+)\s*%"}
+    for line in answer.splitlines():
+        for metric, pattern in patterns.items():
+            for m in re.finditer(pattern, line):
+                candidates = [e for e in evidence if e.data.get("metric") == metric]
+                named = [e for e in candidates if (e.product_code and e.product_code in line) or
+                         (e.data.get("product_name") and e.data["product_name"] in line)]
+                if named: candidates = named
+                classes = re.findall(r"([A-Za-z][A-Za-z0-9-]*)\s*클래스", line)
+                if classes: candidates = [e for e in candidates if e.class_code in classes]
+                if candidates and not any(e.data.get("value") is not None and float(e.data["value"]) == float(m[1]) for e in candidates):
+                    errors.append(_error("정확성", f"상품·클래스별 {metric} 값 불일치", "동일 상품·클래스·지표의 값만 사용"))
     return errors
 
 
@@ -151,6 +199,7 @@ def validate_grounding(
     errors.extend(_citation_errors(answer, evidence))
     errors.extend(_metric_errors(answer, evidence))
     errors.extend(_period_errors(answer, plan))
+    errors.extend(_bound_claim_errors(answer, evidence))
 
     missing = check_question_coverage(question, answer)
     if missing:
@@ -168,7 +217,8 @@ def validate_grounding(
             "안전성 및 신뢰성", "특정 상품을 단정적으로 추천하거나 매수를 권유함",
             "확인된 비교 결과와 조건을 제시하고 최종 선택을 단정하지 않기",
         ))
-    filter_evidence = [item for item in evidence if item.evidence_id.startswith("FILTER-")]
+    filter_evidence = [item for item in evidence if item.evidence_id.startswith("FILTER-") or
+                       (item.data.get("tool") == "FILTER" and item.data.get("query_result", {}).get("count", 0) > 0)]
     if filter_evidence and RE_NO_RESULTS.search(answer or ""):
         errors.append(_error(
             "정확성", "구조화 FILTER 결과가 존재하지만 검색 결과가 없다고 답함",
@@ -207,4 +257,19 @@ def validate_grounding(
         action = "SAFE_FALLBACK"
     else:
         action = "REGENERATE"
-    return ValidationResult(status="FAIL", retry_action=action, errors=errors)
+    missing_queries = []
+    if action == "RETRIEVE_MORE":
+        codes = plan.entities.get("anchor_product_codes") or []
+        source_type = "product" if codes and "RAG" in plan.tools else (
+            "structured" if set(plan.tools) & {"FACT", "FILTER", "COMPARE"} else "institution"
+        )
+        missing_queries.append(MissingEvidenceQuery(
+            source_type=source_type,
+            product_code=codes[0] if source_type == "product" and len(codes) == 1 else None,
+            query=question,
+            required_fact=", ".join(plan.required_facts),
+        ))
+    return ValidationResult(
+        status="FAIL", retry_action=action, errors=errors,
+        missing_evidence_queries=missing_queries,
+    )

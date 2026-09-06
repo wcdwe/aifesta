@@ -52,14 +52,16 @@ def validate_with_llm(
     context: ContextBundle,
     max_tokens: int = 500,
 ) -> ValidationResult:
-    """고위험 LLM 답변만 검증한다. 호출 불가·파싱 실패는 fail-closed다."""
+    """고위험 및 문서 서술 답변의 의미를 검증한다. 호출 실패는 fail-closed다."""
     if not is_configured():
         return _closed_failure("HCX 키가 없어 고위험 답변 검증을 수행할 수 없음")
     payload = {
         "question": question,
         "plan": plan.model_dump(mode="json"),
+        "python_validation": {"status": "PASS", "errors": []},
         "evidence": [item.model_dump(mode="json") for item in evidence],
         "context_truncated": context.truncated,
+        "missing_task_ids": context.missing_task_ids,
         "answer": answer,
     }
     messages = [
@@ -67,7 +69,7 @@ def validate_with_llm(
         {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
     ]
     try:
-        raw = chat(messages, max_tokens=max_tokens, temperature=0.0)
+        raw = chat(messages, max_tokens=max_tokens, temperature=0.0, stage="validator")
     except HcxError as exc:
         return _closed_failure(f"고위험 답변 검증 호출 실패: {exc}")
     return parse_validation(raw)

@@ -35,6 +35,18 @@ class QueryFilter(BaseModel):
     def validate_null_operator(self):
         if self.operator in {FilterOperator.IS_NULL, FilterOperator.IS_NOT_NULL}:
             self.value = None
+        elif self.operator == FilterOperator.IN and not isinstance(self.value, list):
+            raise ValueError("in 조건은 배열 값이 필요합니다")
+        elif self.field in {"risk_level", "total_fee", "total_fee_and_cost", "aum", "distribution_fee"} or self.field.startswith("return_"):
+            import math
+            if self.operator == FilterOperator.CONTAINS:
+                raise ValueError("숫자 지표에는 contains를 사용할 수 없습니다")
+            values = self.value if self.operator == FilterOperator.IN else [self.value]
+            if any(v is None for v in values): raise ValueError("null 비교에는 is_null/is_not_null을 사용해야 합니다")
+            if any(isinstance(v, bool) for v in values): raise ValueError("숫자 조건에 bool 사용 불가")
+            parsed = [float(v) for v in values]
+            if not all(math.isfinite(v) for v in parsed): raise ValueError("유한한 숫자만 허용됩니다")
+            self.value = parsed if self.operator == FilterOperator.IN else parsed[0]
         return self
 
 
@@ -42,6 +54,7 @@ class PlanStep(BaseModel):
     step: int = Field(ge=1)
     tool: Literal["RESOLVE", "FACT", "FILTER", "COMPARE", "RAG", "TAX", "POLICY"]
     purpose: str
+    inputs: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[int] = Field(default_factory=list)
 
 
@@ -82,8 +95,9 @@ class QueryPlan(BaseModel):
         plan_tools = {item.tool for item in self.plan}
         if self.plan and not self.tools:
             raise ValueError("plan이 있으면 tools를 비워 둘 수 없습니다")
-        if self.tools and not plan_tools.issubset(set(self.tools)):
+        if self.plan and plan_tools != set(self.tools):
             raise ValueError("tools에 plan에서 사용하는 도구가 모두 포함되어야 합니다")
+        if steps != sorted(steps): raise ValueError("plan은 step 순서로 정렬되어야 합니다")
         return self
 
 
@@ -100,10 +114,78 @@ class ProductResolution(BaseModel):
     reason: str
 
 
+class AnchorLocked(BaseModel):
+    products: list[ProductCandidate] = Field(default_factory=list)
+    product_status: Literal[
+        "none", "exact", "unambiguous", "multiple", "ambiguous", "not_found"
+    ] = "none"
+    class_codes: list[str] = Field(default_factory=list)
+    filters: list[QueryFilter] = Field(default_factory=list)
+    periods: list[str] = Field(default_factory=list)
+    account_types: list[str] = Field(default_factory=list)
+    return_all: bool | None = None
+    limit: int | None = Field(default=None, ge=1)
+    sort: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class AnchorHint(BaseModel):
+    values: list[str] = Field(default_factory=list)
+    confidence: Literal["low", "high"] = "low"
+
+
+class AnchorHints(BaseModel):
+    fact_types: AnchorHint = Field(default_factory=AnchorHint)
+    source_types: AnchorHint = Field(default_factory=AnchorHint)
+    safety_flags: AnchorHint = Field(default_factory=AnchorHint)
+
+
+class QueryAnchor(BaseModel):
+    """Python 확정 조건과 의미 힌트를 분리한 Planner 입력 계약."""
+    locked: AnchorLocked = Field(default_factory=AnchorLocked)
+    hints: AnchorHints = Field(default_factory=AnchorHints)
+    allowed_source_types: list[Literal["product", "institution", "structured"]] = Field(
+        default_factory=lambda: ["product", "institution", "structured"]
+    )
+    forbidden_source_types: list[Literal["product", "institution", "structured"]] = Field(
+        default_factory=list
+    )
+
+    @property
+    def products(self):
+        return self.locked.products
+
+    @property
+    def product_status(self):
+        return self.locked.product_status
+
+    @property
+    def confirmed_fact_types(self):
+        return self.hints.fact_types.values
+
+    @property
+    def filters(self):
+        return self.locked.filters
+
+    @property
+    def periods(self):
+        return self.locked.periods
+
+    @property
+    def account_types(self):
+        return self.locked.account_types
+
+    @property
+    def return_all(self):
+        return self.locked.return_all
+
+    @property
+    def safety_flags(self):
+        return self.hints.safety_flags.values
+
+
 class PreRouteDecision(BaseModel):
     route: Literal[
-        "FAST_POLICY", "FAST_STRUCTURED", "FAST_FILTER", "FAST_COMPARE",
-        "SIMPLE_DOCUMENT", "AGENT",
+        "FAST_POLICY", "FAST_FACT", "FAST_FILTER", "FAST_COMPARE", "AGENT",
     ]
     reasons: list[str] = Field(default_factory=list)
     safety_flags: list[str] = Field(default_factory=list)
@@ -143,6 +225,7 @@ class ContextBundle(BaseModel):
     omitted_evidence_ids: list[str] = Field(default_factory=list)
     char_count: int = 0
     truncated: bool = False
+    missing_task_ids: list[str] = Field(default_factory=list)
 
 
 class ValidationErrorItem(BaseModel):
@@ -153,6 +236,14 @@ class ValidationErrorItem(BaseModel):
     evidence_id: str | None = None
 
 
+class MissingEvidenceQuery(BaseModel):
+    source_type: Literal["institution", "product", "structured"]
+    product_code: str | None = None
+    fact_type: str = ""
+    query: str = ""
+    required_fact: str = ""
+
+
 class ValidationResult(BaseModel):
     status: Literal["PASS", "FAIL"]
     retry_action: Literal[
@@ -160,11 +251,16 @@ class ValidationResult(BaseModel):
         "RETRIEVE_MORE", "REGENERATE", "SAFE_FALLBACK",
     ]
     errors: list[ValidationErrorItem] = Field(default_factory=list)
+    missing_evidence_queries: list[MissingEvidenceQuery] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_consistency(self):
-        if self.status == "PASS" and (self.errors or self.retry_action != "NONE"):
+        if self.status == "PASS" and (
+            self.errors or self.missing_evidence_queries or self.retry_action != "NONE"
+        ):
             raise ValueError("PASS는 오류가 없어야 하고 retry_action은 NONE이어야 합니다")
         if self.status == "FAIL" and not self.errors:
             raise ValueError("FAIL은 하나 이상의 오류가 필요합니다")
+        if self.retry_action == "RETRIEVE_MORE" and not self.missing_evidence_queries:
+            raise ValueError("RETRIEVE_MORE는 missing_evidence_queries가 필요합니다")
         return self

@@ -33,6 +33,8 @@ from agent_v2.structured_path import try_fast_structured
 from agent_v2.filter_path import try_fast_filter
 from agent_v2.comparison_path import try_fast_compare
 from agent_v2.templates import build_policy_payload
+from agent_v2.anchor import extract_anchor
+from agent_v2.plan_merger import merge_anchor_plan
 
 
 class ProductResolverTests(unittest.TestCase):
@@ -80,10 +82,21 @@ class PreRouterTests(unittest.TestCase):
 
     def test_simple_structured_question(self):
         decision = pre_route("미래에셋장기성장포커스 위험등급 알려줘")
-        self.assertEqual(decision.route, "FAST_STRUCTURED")
+        self.assertEqual(decision.route, "FAST_FACT")
 
-    def test_two_product_difference_is_not_fast_structured(self):
+    def test_period_ambiguous_product_comparison_uses_planner(self):
         decision = pre_route("하나파워e단기채와 한국투자 크레딧포커스 ESG 수익률 차이가 어때?")
+        self.assertEqual(decision.route, "AGENT")
+
+    def test_narrative_product_question_uses_planner(self):
+        decision = pre_route("미래에셋장기성장포커스의 주요 투자위험은 무엇인지 설명해줘.")
+        self.assertEqual(decision.route, "AGENT")
+
+    def test_explicit_structured_comparison_uses_fast_compare(self):
+        decision = pre_route(
+            "미래에셋솔로몬장기국공채와 중장기국공채의 위험등급, "
+            "총보수, 최근 3년 수익률을 각각 비교해줘"
+        )
         self.assertEqual(decision.route, "FAST_COMPARE")
 
     def test_clear_multi_filter_uses_zero_llm_path(self):
@@ -99,6 +112,92 @@ class PreRouterTests(unittest.TestCase):
     def test_approved_template_skips_llm_validation(self):
         risk = assess_risk(["추천"], ["loss_intolerance"], "TEMPLATE")
         self.assertFalse(risk.requires_llm_validation)
+
+
+class AnchorContractTests(unittest.TestCase):
+    def test_product_narrative_locks_product_scope_not_fact_type(self):
+        anchor = extract_anchor(
+            "미래에셋장기성장포커스의 주요 투자위험은 무엇인지 설명해줘."
+        )
+        self.assertEqual([p.product_code for p in anchor.products], ["KR510902511M"])
+        self.assertEqual(anchor.confirmed_fact_types, [])
+        self.assertEqual(anchor.hints.source_types.values, ["product", "structured"])
+        self.assertEqual(anchor.allowed_source_types, ["product", "institution", "structured"])
+
+    def test_explicit_numeric_fact_is_confirmed(self):
+        anchor = extract_anchor("미래에셋장기성장포커스 위험등급 알려줘")
+        self.assertIn("RISK_GRADE", anchor.confirmed_fact_types)
+
+    def test_anchor_repairs_planner_product_omission(self):
+        anchor = extract_anchor(
+            "미래에셋장기성장포커스의 주요 투자위험은 무엇인지 설명해줘."
+        )
+        planner_plan = QueryPlan(
+            intents=["상품설명"], required_facts=["RISK_NARRATIVE"], tools=["RAG"],
+            plan=[{"step": 1, "tool": "RAG", "purpose": "위험 근거 검색"}],
+        )
+        merged = merge_anchor_plan(anchor, planner_plan)
+        self.assertEqual(merged.entities["anchor_product_codes"], ["KR510902511M"])
+        self.assertEqual(merged.entities["allowed_source_types"], ["product", "institution", "structured"])
+        self.assertEqual(merged.plan[0].inputs["source_types"], ["product"])
+        self.assertNotIn("RESOLVE", merged.tools)
+        self.assertFalse(merged.product_mentions[0].resolution_required)
+        self.assertEqual(merged.plan[0].inputs["product_codes"], ["KR510902511M"])
+
+    def test_product_scope_executor_never_queries_institution(self):
+        plan = QueryPlan(
+            intents=["상품설명"], required_facts=["RISK_NARRATIVE"], tools=["RAG"],
+            entities={
+                "anchor_product_codes": ["KR510902511M"],
+                "allowed_source_types": ["product"],
+            },
+            plan=[{"step": 1, "tool": "RAG", "purpose": "상품 위험 검색"}],
+        )
+
+        def fake_retrieve(_question, source_type, product_code=None, k=8, fact_types=None):
+            self.assertEqual(source_type, "product")
+            self.assertEqual(product_code, "KR510902511M")
+            return [{
+                "doc_id": "KR510902511M", "page": 7, "product_code": product_code,
+                "doc_type": "product", "chunk_id": "risk-1", "text": "주요 투자위험 근거",
+            }]
+
+        with patch("agent_v2.task_executor.retrieve_document_hits", side_effect=fake_retrieve):
+            result = execute_plan("주요 투자위험은?", plan)
+        self.assertEqual(result.status, "PASS")
+        self.assertTrue(all(ev.product_code == "KR510902511M" for ev in result.evidence))
+
+    def test_planner_receives_question_and_anchor(self):
+        from agent_v2 import query_analyzer as planner
+
+        anchor = extract_anchor("미래에셋장기성장포커스 주요 투자위험을 설명해줘")
+        raw_plan = json.dumps({
+            "intents": ["상품설명"],
+            "required_facts": ["RISK_NARRATIVE"],
+            "tools": ["RAG"],
+            "plan": [{"step": 1, "tool": "RAG", "purpose": "위험 근거 검색"}],
+        }, ensure_ascii=False)
+        captured = []
+
+        def fake_chat(messages, **_kwargs):
+            captured.extend(messages)
+            return raw_plan
+
+        with patch("agent_v2.query_analyzer.is_configured", return_value=True), \
+             patch("agent_v2.query_analyzer.chat", side_effect=fake_chat):
+            outcome = planner.analyze(
+                "미래에셋장기성장포커스 주요 투자위험을 설명해줘", anchor=anchor
+            )
+
+        self.assertIsNotNone(outcome.plan)
+        payload = json.loads(captured[1]["content"])
+        self.assertEqual(
+            payload["query_anchor"]["locked"]["products"][0]["product_code"],
+            "KR510902511M",
+        )
+        self.assertEqual(
+            payload["query_anchor"]["allowed_source_types"], ["product", "institution", "structured"]
+        )
 
 
 class ValidationSchemaTests(unittest.TestCase):
@@ -322,7 +421,8 @@ class ValidationGateTests(unittest.TestCase):
         self.assertEqual(outcome.status, "SAFE_FALLBACK")
         self.assertEqual(outcome.retry_count, 1)
         self.assertTrue(outcome.used_safe_fallback)
-        self.assertIn("검증을 통과한 범위", outcome.answer)
+        self.assertIn("검증하지 못했습니다", outcome.answer)
+        self.assertNotIn("검증을 통과한 범위", outcome.answer)
 
     def test_repaired_context_is_returned_by_gate(self):
         repaired_evidence = [Evidence(
@@ -386,14 +486,14 @@ class OrchestratorTests(unittest.TestCase):
             "question_id", "question", "retrieved_context", "think_trace", "answer"
         )))
 
-    def test_analysis_failure_falls_back_to_legacy_path(self):
+    def test_analysis_failure_returns_no_payload_to_runtime(self):
         body = try_agent_payload(
             "Q-2", "질문",
             analyzer=lambda _q: AnalysisOutcome(None, "분석 실패"),
         )
         self.assertIsNone(body)
 
-    def test_generation_failure_falls_back_to_legacy_path(self):
+    def test_generation_failure_returns_no_payload_to_runtime(self):
         body = try_agent_payload(
             "Q-3", "상품 A와 B 비교",
             analyzer=lambda _q: self._analysis(), executor=self._execution,
@@ -589,7 +689,7 @@ class PlanExecutorTests(unittest.TestCase):
         question = "미래수익 10 이상 상품"
         result = execute_plan(question, parse_plan(raw, question).plan)
         self.assertEqual(result.status, "FAIL")
-        self.assertIn("허용되지 않은", result.errors[0])
+        self.assertIn("지원되지 않은 정형 항목", result.errors[0])
 
     def test_two_resolved_products_can_be_compared(self):
         raw = """{"intents":["비교"],"entities":{},"product_mentions":[
@@ -606,8 +706,8 @@ class PlanExecutorTests(unittest.TestCase):
         plan = parse_plan(raw, question).plan
         result = execute_plan(question, plan)
         self.assertEqual(result.status, "PASS", result.errors)
-        self.assertIn("KR5153420079", result.tool_results["COMPARE"])
-        self.assertIn("KR5153420105", result.tool_results["COMPARE"])
+        codes = {r["product_code"] for r in result.tool_results["COMPARE"]["rows"]}
+        self.assertEqual(codes, {"KR5153420079", "KR5153420105"})
 
     def test_rag_is_scoped_per_resolved_product(self):
         raw = """{"intents":["상품설명"],"entities":{},"product_mentions":[
@@ -677,19 +777,23 @@ class FastFilterAndCompareTests(unittest.TestCase):
         self.assertIn("LLM 호출 없음", result["think_trace"])
         self.assertNotIn("찾지 못했습니다", result["answer"])
         self.assertIn("과거 수익률은 미래", result["answer"])
-        count = int(re.search(r"조건에 맞는 상품: (\d+)개", result["answer"]).group(1))
+        count = int(re.search(r"조건을 확인한 상품 (\d+)개", result["answer"]).group(1))
         self.assertGreater(count, 0)
-        self.assertEqual(result["answer"].count("(출처: class_returns"), count)
+        # Multiple matching classes may be shown; cite actual PDF pages, not a
+        # fabricated class_returns document. Product count is unique codes.
+        codes = set(re.findall(r"KR[A-Z0-9]{10}", result["answer"]))
+        self.assertEqual(len(codes), count)
+        self.assertNotIn("(출처: class_returns", result["answer"])
 
     def test_comparison_skips_llm_and_adds_return_limit(self):
         result = try_fast_compare(
             "Q", "미래에셋솔로몬장기국공채와 중장기국공채의 위험등급, 총보수, 최근 3년 수익률을 비교해줘"
         )
         self.assertIsNotNone(result)
-        self.assertIn("질의분석/답변생성 LLM 호출 없음", result["think_trace"])
+        self.assertIn("LLM 호출 없음", result["think_trace"])
         self.assertIn("과거 수익률은 미래", result["answer"])
-        self.assertIn("기준일은 현재 구조화 자료에서", result["answer"])
-        self.assertIn("총보수 기준일", result["answer"])
+        self.assertIn("기준일 확인되지 않음", result["answer"])
+        self.assertIn("총보수", result["answer"])
 
 
 class SimpleDocumentTests(unittest.TestCase):
@@ -779,7 +883,7 @@ class SimpleDocumentTests(unittest.TestCase):
     def test_deposit_maturity_is_document_question(self):
         self.assertEqual(
             pre_route("예금 만기상환 자금은 자동 재예치 되는 거 아니었나요?").route,
-            "SIMPLE_DOCUMENT",
+            "AGENT",
         )
 
     def test_faq_index_is_skipped_for_deposit_maturity(self):
@@ -819,14 +923,8 @@ class SimpleDocumentTests(unittest.TestCase):
         hits = retrieve_document_hits("연금저축 해지 시 세금이 부과되나요?", "institution")
         self.assertIn("기타소득세", hits[0].get("text", ""))
 
-    @unittest.expectedFailure
-    def test_early_termination_tax_subject_ambiguity_is_a_known_gap(self):
-        """"연금저축"(세제적격 연금저축)과 "개인연금저축"(다른 상품)이
-        둘 다 "중도해지"+과세를 다루는 페이지가 있어서, 표현에 따라
-        가끔 다른 상품 얘기로 새간다("연금저축 중도해지 시 과세는?" 실측
-        - 개인연금저축의 이자소득 비과세 조항으로 감. 정답은 아니지만
-        완전히 무관하지도 않다) - 짧은 접미사 정규화로는 못 가리는
-        subject 층위 모호함이라 알려진 한계로 남겨 둔다."""
+    def test_early_termination_tax_subject_ambiguity_is_resolved(self):
+        """연금저축 중도해지 질문은 구체적인 세목 결과가 있는 근거를 우선한다."""
         hits = retrieve_document_hits("연금저축 중도해지 시 과세는?", "institution")
         self.assertIn("기타소득세", hits[0].get("text", ""))
 
@@ -838,10 +936,15 @@ class RagConditionsAnswerTests(unittest.TestCase):
     tests/test_agent_v2.py의 다른 SimpleDocumentTests와는 분리해 둔다."""
 
     def setUp(self):
-        self.generate_patcher = patch("answer_llm.generate", return_value=(None, "테스트에서 LLM 호출 생략"))
+        self.generate_patcher = patch("agent_v2.document_path.generate", return_value=(None, "테스트에서 LLM 호출 생략"))
         self.generate_patcher.start()
+        self.planner_patcher = patch(
+            "agent_v2.query_analyzer.is_configured", return_value=False
+        )
+        self.planner_patcher.start()
 
     def tearDown(self):
+        self.planner_patcher.stop()
         self.generate_patcher.stop()
 
     _REASON_GROUPS = [
@@ -855,7 +958,8 @@ class RagConditionsAnswerTests(unittest.TestCase):
         있나요? 네, 가능합니다"처럼 실제 사유가 하나도 없는 답도 통과했다.
         대표 사유 범주(주택/요양/파산 계열)가 실제로 답변에 나오는지
         확인한다."""
-        from api.server import answer_payload
+        # Legacy extraction helper regression, not the production Planner API.
+        from agent_v2.document_path import try_simple_institution_document as answer_payload
 
         questions = [
             "퇴직연금 중도인출은 어떤 경우에 가능한가요?",

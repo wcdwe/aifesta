@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Callable
-
 from .grounding_validator import validate_grounding
 from .pre_router import assess_risk
 from .schemas import ContextBundle, Evidence, QueryPlan, RiskDecision, ValidationResult
@@ -27,112 +26,67 @@ class GateOutcome:
     llm_validation: ValidationResult | None
     retry_count: int
     used_safe_fallback: bool
+    history: tuple[dict, ...] = ()
 
 
-RepairHandler = Callable[[str, list], RepairResult | None]
+RepairHandler = Callable[..., RepairResult | None]
 LlmValidator = Callable[[str, str, QueryPlan, list[Evidence], ContextBundle], ValidationResult]
 
 
 def _safe_answer(evidence: list[Evidence]) -> str:
-    usable = [item for item in evidence if item.content.strip()][:3]
-    if not usable:
-        return "제공된 자료에서 검증 가능한 근거를 확인하지 못해 답변할 수 없습니다."
-    lines = ["검증을 통과한 범위의 근거만 안내드립니다."]
-    for item in usable:
-        citation = item.source
-        if item.page is not None:
-            citation += f", p.{item.page}"
-        lines.append(f"- {item.content.strip()} (출처: {citation})")
+    # Do not present unvalidated generated prose or truncated raw RAG as verified.
+    usable = [e for e in evidence if e.data.get("verified") and
+              (e.data.get("metric") or e.kind == "policy")]
+    lines = ["답변 전체의 근거 연결을 충분히 검증하지 못했습니다."]
+    if usable:
+        lines.append("현재 구조화 자료에서 직접 확인되는 항목은 다음과 같습니다.")
+        for e in usable:
+            citation = e.source + (f", p.{e.page}" if e.page is not None else "")
+            lines.append(f"- {e.content} (출처: {citation})")
+    else:
+        lines.append("검증되지 않은 문장을 사실로 안내하지 않겠습니다. 제공된 근거만으로 요청한 결론을 확정할 수 없습니다.")
     return "\n".join(lines)
 
 
-def run_validation_gate(
-    question: str,
-    answer: str,
-    plan: QueryPlan,
-    evidence: list[Evidence],
-    context: ContextBundle,
-    *,
-    answer_source: str = "LLM",
-    repair_handler: RepairHandler | None = None,
-    llm_validator: LlmValidator = validate_with_llm,
-) -> GateOutcome:
-    """Python 검증 → 위험 게이트 → 최대 1회 재처리 → 안전 답변을 강제한다."""
-    risk = assess_risk(plan.intents, plan.safety_flags, answer_source)
+def run_validation_gate(question, answer, plan, evidence, context, *,
+                        answer_source="LLM", repair_handler=None,
+                        llm_validator=validate_with_llm) -> GateOutcome:
+    guarded_intents = [*plan.intents, *( ["세제"] if "TAX" in plan.tools else [] )]
+    risk = assess_risk(guarded_intents, plan.safety_flags, answer_source)
     current_answer, current_evidence, current_context = answer, evidence, context
-    retry_count = 0
-
-    py_result = validate_grounding(
-        question, current_answer, plan, current_evidence, current_context
-    )
-    llm_result: ValidationResult | None = None
-
-    # Python 확정 오류는 검증 LLM으로 보내지 않는다.
-    if py_result.status == "FAIL":
-        if repair_handler is not None and py_result.retry_action != "SAFE_FALLBACK":
-            repaired = repair_handler(py_result.retry_action, py_result.errors)
-            retry_count = 1
-            if repaired is not None:
-                current_answer = repaired.answer
-                current_evidence = repaired.evidence
-                current_context = repaired.context
-                py_result = validate_grounding(
-                    question, current_answer, plan, current_evidence, current_context
-                )
-        if py_result.status == "FAIL":
-            return GateOutcome(
-                answer=_safe_answer(current_evidence), status="SAFE_FALLBACK", risk=risk,
-                evidence=current_evidence, context=current_context,
-                python_validation=py_result, llm_validation=None,
-                retry_count=retry_count, used_safe_fallback=True,
-            )
-
-    if not risk.requires_llm_validation:
-        return GateOutcome(
-            answer=current_answer, status="PASS", risk=risk,
-            evidence=current_evidence, context=current_context,
-            python_validation=py_result, llm_validation=None,
-            retry_count=retry_count, used_safe_fallback=False,
-        )
-
-    llm_result = llm_validator(
-        question, current_answer, plan, current_evidence, current_context
-    )
-    if llm_result.status == "PASS":
-        return GateOutcome(
-            answer=current_answer, status="PASS", risk=risk,
-            evidence=current_evidence, context=current_context,
-            python_validation=py_result, llm_validation=llm_result,
-            retry_count=retry_count, used_safe_fallback=False,
-        )
-
-    # 앞에서 재처리하지 않았을 때만 검증 LLM 실패를 한 번 고칠 수 있다.
-    if repair_handler is not None and retry_count == 0 \
-            and llm_result.retry_action != "SAFE_FALLBACK":
-        repaired = repair_handler(llm_result.retry_action, llm_result.errors)
+    history, retry_count = [], 0
+    llm_result = None
+    # Python can verify identifiers/numbers, not entailment of free-form prose.
+    semantic_required = answer_source == "LLM" and any(e.kind == "document" for e in evidence)
+    for attempt in range(2):
+        # Validation must use exactly the evidence supplied to this generation.
+        visible = [e for e in current_evidence if e.evidence_id in current_context.evidence_ids]
+        py_result = validate_grounding(question, current_answer, plan, visible, current_context)
+        history.append({"stage": "python", "attempt": attempt,
+                        **py_result.model_dump(mode="json")})
+        result = py_result
+        if py_result.status == "PASS" and (risk.requires_llm_validation or semantic_required):
+            llm_result = llm_validator(question, current_answer, plan, visible, current_context)
+            history.append({"stage": "semantic", "attempt": attempt,
+                            **llm_result.model_dump(mode="json")})
+            result = llm_result
+        if result.status == "PASS":
+            return GateOutcome(current_answer, "PASS", risk, current_evidence,
+                current_context, py_result, llm_result, retry_count, False, tuple(history))
+        if attempt or not repair_handler or result.retry_action == "SAFE_FALLBACK":
+            break
         retry_count = 1
-        if repaired is not None:
-            current_answer = repaired.answer
-            current_evidence = repaired.evidence
-            current_context = repaired.context
-            py_result = validate_grounding(
-                question, current_answer, plan, current_evidence, current_context
-            )
-            if py_result.status == "PASS":
-                llm_result = llm_validator(
-                    question, current_answer, plan, current_evidence, current_context
-                )
-                if llm_result.status == "PASS":
-                    return GateOutcome(
-                        answer=current_answer, status="PASS", risk=risk,
-                        evidence=current_evidence, context=current_context,
-                        python_validation=py_result, llm_validation=llm_result,
-                        retry_count=retry_count, used_safe_fallback=False,
-                    )
-
-    return GateOutcome(
-        answer=_safe_answer(current_evidence), status="SAFE_FALLBACK", risk=risk,
-        evidence=current_evidence, context=current_context,
-        python_validation=py_result, llm_validation=llm_result,
-        retry_count=retry_count, used_safe_fallback=True,
-    )
+        # New handlers get full error/query payload and the actual previous text.
+        # Keep injected two-argument test/external handlers backwards compatible.
+        import inspect
+        if "validation" in inspect.signature(repair_handler).parameters:
+            repaired = repair_handler(result.retry_action, result.errors,
+                                      validation=result, previous_answer=current_answer)
+        else:
+            repaired = repair_handler(result.retry_action, result.errors)
+        if repaired is None:
+            history.append({"stage": "repair", "attempt": 1, "status": "UNAVAILABLE"})
+            break
+        current_answer, current_evidence, current_context = repaired.answer, repaired.evidence, repaired.context
+    return GateOutcome(_safe_answer(current_evidence), "SAFE_FALLBACK", risk,
+        current_evidence, current_context, py_result, llm_result, retry_count, True, tuple(history))

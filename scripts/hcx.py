@@ -85,7 +85,7 @@ def is_configured():
 
 
 def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
-         repeat_penalty=1.1, timeout=None, model=None):
+         repeat_penalty=1.1, timeout=None, model=None, stage="unspecified"):
     """messages(role/content 목록) -> 답변 글자.
 
     실패하면 HcxError를 올린다. 조용히 빈 문자열을 돌려주면 부르는 쪽이
@@ -93,8 +93,9 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
     해야 할 말이 다르다."""
     global _consecutive_failures, _breaker_open
     # 요청별 호출량은 API 응답 trace에만 요약하며 키·프롬프트 원문은 남기지 않는다.
-    from agent_v2.telemetry import record_call, record_failure, record_success
-    record_call(messages)
+    from agent_v2.telemetry import (record_call, record_failure, record_success,
+                                    record_http_attempt, record_actual_usage)
+    record_call(messages, stage=stage)
     load_dotenv()
     key = os.environ.get("NCP_CLOVASTUDIO_API_KEY")
     if not key:
@@ -130,11 +131,13 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
 
     last = None
     for attempt in range(len(RETRY_WAITS) + 1):
+        record_http_attempt()
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read().decode("utf-8")
             out = _content_of(raw)
+            record_actual_usage(json.loads(raw))
             record_success(out)
             _consecutive_failures = 0
             return out
@@ -147,6 +150,9 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
                 raise last
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             last = HcxError(f"연결 실패: {e}")
+        except HcxError:
+            record_failure()
+            raise
         if attempt < len(RETRY_WAITS):
             time.sleep(RETRY_WAITS[attempt])
     _note_failure()
