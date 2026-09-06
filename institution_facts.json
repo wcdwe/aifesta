@@ -204,6 +204,18 @@
     "source_as_of": null
   },
   {
+    "subject": "DC",
+    "predicate": "risky_asset_limit",
+    "value": 70,
+    "unit": "percent",
+    "condition": "전체 적립금 대비 위험자산 투자 비중 상한(기본값). 감독원장이 정한 기준을 충족한 TDF는 예외적으로 DC/IRP에서 100%까지 가능(DB는 TDF도 70%까지만 가능) - doc58 p.3",
+    "source_doc": "doc58",
+    "page": 2,
+    "evidence": "퇴직연금 적립금의 70%까지만 투자가능한 운용방법",
+    "confidence": 0.9,
+    "source_as_of": null
+  },
+  {
     "subject": "IRP",
     "predicate": "definition",
     "value": "개인형 퇴직연금제도 - 근로자나 자영업자가 퇴직 시 받은 일시금 또는 본인의 자금을 적립·운용하여 노후생활자금으로 활용하는 개인 연금제도",
