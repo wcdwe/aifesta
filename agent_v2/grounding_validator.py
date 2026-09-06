@@ -100,6 +100,50 @@ def _citation_errors(answer: str, evidence: list[Evidence]) -> list[ValidationEr
     return errors
 
 
+# 답변 끝에 출처를 몰아서 한 번만 달면, 그 사이의 문장은 근거가 없어도
+# 아무 검사도 받지 않는다(실측: 투자설명서에 없는 "시장 리스크", "분산 투자의
+# 어려움"을 위험요인으로 지어내고 맨 끝에만 출처 두 개를 붙여 통과했다.
+# 심지어 근거 p.39에는 "동일 종목 10% 이하로 분산 투자해 위험을 관리한다"고
+# 적혀 있어 지어낸 문장이 근거와 반대였다). 그래서 "인용이 하나라도 있으면
+# 통과"가 아니라, 사실을 주장하는 항목마다 그 항목 안에 인용이 있는지 본다.
+_CLAIM_TERM_RE = re.compile(
+    r"위험|투자|전략|수익|보수|비용|등급|세액공제|한도|납입|연금|자산|운용|"
+    r"손실|과세|환매|유동성|신용|편입|지수|클래스|퇴직")
+_HEADING_RE = re.compile(r"^\s*(?:\*+|#+)?\s*\*{0,2}[^.!?]{1,40}\*{0,2}\s*$")
+# "충분히 숙지해야 하며 위험 요소를 살펴볼 필요가 있습니다" 같은 맺음말은
+# 사실 주장이 아니라 안내다. 낱말("투자", "위험")만 보고 걸면 이런 문장까지
+# 미인용으로 잡혀 멀쩡한 답변이 반려된다. 다만 구체 수치가 섞이면 안내를
+# 가장한 주장일 수 있으므로 그때는 면제하지 않는다.
+_META_SENTENCE_RE = re.compile(
+    r"숙지|살펴볼|참고하|유의하|주의 깊게|바랍니다|권장|안내드|도움이 되|"
+    r"문서를 통해|확인이 필요|확인해 주|자세한 내용은")
+_SPECIFIC_VALUE_RE = re.compile(r"\d")
+_MIN_CLAIM_LENGTH = 25
+
+
+def _uncited_claim_errors(answer: str, evidence: list[Evidence]) -> list[ValidationErrorItem]:
+    if not any(item.kind == "document" for item in evidence):
+        return []
+    uncited = []
+    for line in (answer or "").splitlines():
+        text = line.strip()
+        if len(text) < _MIN_CLAIM_LENGTH or _HEADING_RE.match(text):
+            continue
+        if RE_CITATION.search(text) or not _CLAIM_TERM_RE.search(text):
+            continue
+        if _META_SENTENCE_RE.search(text) and not _SPECIFIC_VALUE_RE.search(text):
+            continue
+        uncited.append(text[:40])
+    if not uncited:
+        return []
+    return [_error(
+        "근거 기반 답변",
+        f"문서 근거를 달지 않고 단정한 항목: {uncited[:3]}",
+        "각 항목 끝에 그 내용을 뒷받침하는 근거를 하나씩 표시하고, "
+        "근거에 없는 내용은 답변에서 삭제",
+    )]
+
+
 def _bound_claim_errors(answer, evidence):
     """Check each cited clause against its own evidence, not the union of values.
 
@@ -216,6 +260,7 @@ def validate_grounding(
 
     errors.extend(_class_errors(answer, evidence))
     errors.extend(_citation_errors(answer, evidence))
+    errors.extend(_uncited_claim_errors(answer, evidence))
     errors.extend(_metric_errors(answer, evidence))
     errors.extend(_period_errors(answer, plan))
     errors.extend(_bound_claim_errors(answer, evidence))

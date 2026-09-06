@@ -35,6 +35,10 @@ LlmValidator = Callable[[str, str, QueryPlan, list[Evidence], ContextBundle], Va
 
 MAX_FALLBACK_DOCUMENTS = 3
 FALLBACK_EXCERPT_CHARS = 300
+# 재생성은 한 번에 다 고쳐지지 않고 한 번마다 남은 지적이 줄어든다(실측:
+# 1차에 항목 3개 미인용 -> 2차에 1개 -> 3차 PASS). 기회가 한 번뿐이면 거의
+# 다 고친 답변도 통째로 버려져 근거 원문만 나갔다.
+MAX_REPAIR_ATTEMPTS = 2
 
 
 def _safe_answer(evidence: list[Evidence]) -> str:
@@ -81,7 +85,7 @@ def run_validation_gate(question, answer, plan, evidence, context, *,
     llm_result = None
     # Python can verify identifiers/numbers, not entailment of free-form prose.
     semantic_required = answer_source == "LLM" and any(e.kind == "document" for e in evidence)
-    for attempt in range(2):
+    for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
         # Validation must use exactly the evidence supplied to this generation.
         visible = [e for e in current_evidence if e.evidence_id in current_context.evidence_ids]
         py_result = validate_grounding(question, current_answer, plan, visible, current_context)
@@ -96,9 +100,9 @@ def run_validation_gate(question, answer, plan, evidence, context, *,
         if result.status == "PASS":
             return GateOutcome(current_answer, "PASS", risk, current_evidence,
                 current_context, py_result, llm_result, retry_count, False, tuple(history))
-        if attempt or not repair_handler or result.retry_action == "SAFE_FALLBACK":
+        if attempt >= MAX_REPAIR_ATTEMPTS or not repair_handler or result.retry_action == "SAFE_FALLBACK":
             break
-        retry_count = 1
+        retry_count = attempt + 1
         # New handlers get full error/query payload and the actual previous text.
         # Keep injected two-argument test/external handlers backwards compatible.
         import inspect

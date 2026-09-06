@@ -18,7 +18,7 @@ from agent_v2.executor import execute_plan
 from agent_v2.context_builder import build_context
 from agent_v2.grounding_validator import validate_grounding
 from agent_v2.schemas import ContextBundle, Evidence, QueryPlan, ValidationResult
-from agent_v2.validation_gate import RepairResult, run_validation_gate
+from agent_v2.validation_gate import MAX_REPAIR_ATTEMPTS, RepairResult, run_validation_gate
 from agent_v2.validator_llm import parse_validation
 from agent_v2.answer_generator import GenerationOutcome
 from agent_v2.orchestrator import try_agent_payload
@@ -426,7 +426,8 @@ class ValidationGateTests(unittest.TestCase):
             llm_validator=self._fail_validator,
         )
         self.assertEqual(outcome.status, "SAFE_FALLBACK")
-        self.assertEqual(outcome.retry_count, 1)
+        # 계속 실패해도 재생성은 상한에서 멈춘다(무한 재시도 금지).
+        self.assertEqual(outcome.retry_count, MAX_REPAIR_ATTEMPTS)
         self.assertTrue(outcome.used_safe_fallback)
         self.assertIn("검증하지 못했습니다", outcome.answer)
         self.assertNotIn("검증을 통과한 범위", outcome.answer)

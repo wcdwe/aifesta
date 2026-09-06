@@ -10,7 +10,7 @@ from agent_v2.plan_merger import merge_anchor_plan
 from agent_v2.context_builder import build_context
 from agent_v2.task_executor import execute_tasks
 from agent_v2.tax_inputs import calculate
-from agent_v2.validation_gate import run_validation_gate, RepairResult
+from agent_v2.validation_gate import MAX_REPAIR_ATTEMPTS, run_validation_gate, RepairResult
 from agent_v2.grounding_validator import validate_grounding
 from agent_v2.telemetry import reset_usage, record_actual_usage, record_http_attempt, usage_snapshot
 
@@ -141,8 +141,9 @@ class PipelineContracts(unittest.TestCase):
             result = run_validation_gate("설명", "내용", QueryPlan(), [ev], ctx,
                 llm_validator=lambda *a: fail,
                 repair_handler=lambda *a: RepairResult("수정 내용", [ev], ctx))
-        self.assertEqual(result.retry_count, 1)
-        self.assertEqual(len(result.history), 4)
+        self.assertEqual(result.retry_count, MAX_REPAIR_ATTEMPTS)
+        # 시도마다 python·semantic 두 건이 쌓이고, 상한을 넘겨 반복하지 않는다.
+        self.assertEqual(len(result.history), 2 * (MAX_REPAIR_ATTEMPTS + 1))
         self.assertEqual(result.history[1]["errors"][0]["problem"], "unsupported")
         self.assertEqual(result.status, "SAFE_FALLBACK")
         self.assertNotIn("검증을 통과한", result.answer)
