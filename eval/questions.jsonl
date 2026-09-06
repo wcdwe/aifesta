@@ -2,11 +2,11 @@
 {"id":"INST-02","category":"세제","q":"연금저축과 IRP를 합쳐서 세액공제 한도가 얼마인가요?","route":"institution_facts","must":["900","세액공제"],"note":"연금저축 600 + IRP 포함 900만원"}
 {"id":"INST-03","category":"세제","q":"연금저축 세액공제율은 몇 퍼센트예요?","route":"rag","must":["세액공제"],"note":"총급여 기준 13.2%/16.5%"}
 {"id":"INST-04","category":"제도","q":"연금은 몇 살부터 받을 수 있나요?","route":"rag","must":["55"],"note":"만 55세"}
-{"id":"INST-05","category":"제도","q":"연금저축을 중도해지하면 세금이 어떻게 되나요?","route":"rag","must":["기타소득세"],"note":"기타소득세 16.5%"}
-{"id":"INST-06","category":"제도","q":"퇴직연금 중도인출은 어떤 경우에 가능한가요?","route":"rag","must":["중도인출"],"note":"무주택자 주택구입/전세보증금/요양/파산 등"}
+{"id":"INST-05","category":"제도","q":"연금저축을 중도해지하면 세금이 어떻게 되나요?","route":"rag","must":["기타소득세"],"expected_evidence":[{"document_id":"doc31","page":10},{"document_id":"doc37","page":8}],"note":"기타소득세 16.5%"}
+{"id":"INST-06","category":"제도","q":"퇴직연금 중도인출은 어떤 경우에 가능한가요?","route":"rag","must":["중도인출"],"expected_evidence":[{"document_id":"doc14","page":2}],"note":"무주택자 주택구입/전세보증금/요양/파산 등"}
 {"id":"INST-07","category":"제도","q":"디폴트옵션(사전지정운용방법)이 뭔가요?","route":"rag","must":["사전지정운용"],"note":""}
 {"id":"INST-08","category":"제도","q":"IRP 계좌는 누가 가입할 수 있나요?","route":"institution_facts","must":["IRP"],"note":"소득이 있는 취업자"}
-{"id":"INST-09","category":"제도","q":"DC형에서 위험자산은 최대 몇 퍼센트까지 담을 수 있나요?","route":"rag","must":["70"],"note":"위험자산 70% 한도"}
+{"id":"INST-09","category":"제도","q":"DC형에서 위험자산은 최대 몇 퍼센트까지 담을 수 있나요?","route":"rag","must":["70"],"must_answer":["70%"],"expected_evidence":[{"document_id":"doc14","page":2}],"note":"위험자산 70% 한도"}
 {"id":"INST-10","category":"세제","q":"연금소득세율은 나이에 따라 어떻게 달라지나요?","route":"rag","must":["연금소득세"],"note":"55~69세 5.5%, 70~79세 4.4%, 80세~ 3.3%"}
 {"id":"INST-11","category":"제도","q":"퇴직연금 적립금을 다른 금융회사로 옮길 수 있나요?","route":"rag","must":[],"note":"계약이전"}
 {"id":"INST-12","category":"제도","q":"연금계좌에서 연간 연금수령한도는 어떻게 계산하나요?","route":"rag","must":["연금수령한도"],"note":"평가액/(11-연금수령연차)*120%"}

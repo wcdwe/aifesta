@@ -10,29 +10,52 @@ eval/questions.jsonl의 각 줄:
     route                      기대 경로 (rag / single_product / comparison)
     code                       기대 상품코드 (있을 때만)
     must                       사용자에게 보이는 답변에 반드시 있어야 할 문자열
+    must_answer                (선택) must를 대신할 때 - 의미는 must와 같다.
+                                둘 다 있으면 이쪽을 쓴다.
     must_not                   답변에 있으면 안 되는 문자열
+    expected_evidence          (선택) [{"document_id":"docNN","page":N}, ...] -
+                                이 문항의 정답을 실제로 뒷받침하는 문서·페이지.
+                                있는 문항만 retrieval_pass/citation_pass를 엄격히
+                                가릴 수 있다(아래 설명).
     note                       사람이 눈으로 볼 때 참고할 메모
 
-must/must_not은 반드시 사용자가 실제로 받는 payload["answer"]만 본다.
+answer_pass는 반드시 사용자가 실제로 받는 payload["answer"]만 본다.
 예전엔 answer+retrieved_context+think_trace를 합쳐서 검사했는데, 그러면
 "근거 어딘가에 정답 단어가 있었다"와 "사용자가 정답을 받았다"가 같은
 걸로 취급된다 - 실측(2026-09-06): 이렇게 재본 결과 INST-05는 답변이
 "과학기술인공제회 FAQ"(사망·MP플랜)로 완전히 딴 얘기를 하는데도, 근거
 청크 어딘가에 있던 "기타소득세"란 글자 때문에 "통과"로 나왔었다.
 
-대신 두 신호를 나눠 본다.
-    answer_pass     사용자가 받는 답변(answer)에 must가 다 있고 must_not이
-                     없는가 - 이게 진짜 통과 기준이다.
-    evidence_pass    검색된 근거(retrieved_context)에 must가 있는가 - 정답을
-                     뒷받침할 자료를 찾긴 했는가.
-둘을 같이 보면 원인이 갈린다.
-    answer_pass=True,  evidence_pass=True   정상
-    answer_pass=False, evidence_pass=True   답변조립 실패 - 근거는 찾았는데
-                                             엉뚱한 걸 답했거나 빠뜨렸다
-    answer_pass=False, evidence_pass=False  검색 실패 - 애초에 못 찾았다
-    answer_pass=True,  evidence_pass=False  근거 없이 맞혔다 - 우연이거나
-                                             (route=blocked처럼 애초에 근거가
-                                             필요 없는 문항일 수 있다) 확인 필요
+must(_answer)의 문자열 포함 검사도 숫자류는 그냥 substring이 아니라
+숫자 경계·단위까지 맞춰서 본다 - 실측(2026-09-06): INST-09의 must가
+"70"이었는데, 답변이 엉뚱한 근거를 냈어도 그 근거 안의 "MP70"(상품
+포트폴리오 이름, 정답과 무관)의 "70" 때문에 통과로 잘못 나왔었다.
+_answer_contains()가 숫자류는 앞뒤로 다른 숫자/영문자가 안 붙어 있을
+때만(그리고 %가 붙은 형태라면 % 뒤에도 아무것도 안 붙을 때만) 인정한다.
+
+evidence_pass(근거를 찾았는가)는 원래 retrieved_context에 must 글자가
+있는지로만 봤는데, 이것도 같은 함정에 걸린다 - "그 근거가 진짜 정답을
+뒷받침하는 문서인지"가 아니라 "글자가 어쩌다 겹쳤는지"만 본다. 대신
+expected_evidence가 있는 문항은 다음 두 신호로 쪼갠다.
+    retrieval_pass   검색 후보군(retrieved_context+think_trace)에
+                     expected_evidence의 (document_id, page) 쌍이 하나라도
+                     있는가 - 애초에 후보에 정답 문서가 걸렸는가.
+    citation_pass    최종 답변(answer)이 실제로 인용한 (document_id, page)가
+                     expected_evidence 중 하나인가 - 후보에 있었어도 답변
+                     조립 단계에서 그 문서를 골랐는가.
+expected_evidence가 없는 문항(대부분)은 예전처럼 부분 문자열 기반의
+느슨한 evidence_hint만 참고용으로 남긴다 - 근거 문서를 아직 하나하나
+확인 못 한 문항까지 전부 강한 기준을 요구할 수는 없다.
+
+    answer_pass=True                              정상
+    answer_pass=False, retrieval_pass=False        검색 실패 - 후보에도 없었다
+    answer_pass=False, retrieval_pass=True,
+                        citation_pass=False         답변조립 실패 - 후보엔
+                                                     있었는데 다른 근거를 인용함
+    answer_pass=False, retrieval_pass=True,
+                        citation_pass=True           맞는 근거를 인용했는데도
+                                                      must_answer 불통과 -
+                                                      발췌·서술 자체의 문제
 
 기계로 확인할 수 있는 건 경로·상품코드·숫자 포함 여부까지다. 제도 질문의
 답이 실제로 맞는 말인지는 자동으로 못 가리므로, 근거를 같이 찍어서 사람이
@@ -48,6 +71,7 @@ must/must_not은 반드시 사용자가 실제로 받는 payload["answer"]만 �
 import argparse
 import json
 import os
+import re
 import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -69,14 +93,51 @@ def load_questions(path=QUESTIONS_PATH):
     return out
 
 
+# must(_answer)의 항목이 이 모양이면 "숫자류"로 보고 경계 검사를 적용한다
+# (정수/소수, 천단위 콤마, 끝에 % 선택). "KR5111420047"처럼 문자가 섞인
+# 상품코드나 "기타소득세" 같은 일반 문자열은 여기 안 걸려 예전처럼 단순
+# substring 검사로 간다.
+_NUMERIC_NEEDLE_RE = re.compile(r"^-?\d[\d,]*(?:\.\d+)?%?$")
+_DOC_PAGE_RE = re.compile(r"([A-Za-z][A-Za-z0-9_]*\d[A-Za-z0-9_]*)\s*p\.\s*(\d+)")
+
+
+def _answer_contains(text, needle):
+    """숫자류 needle은 앞뒤로 다른 숫자/영문자가 안 붙어 있을 때만 인정한다.
+
+    "70"이 "MP70"(포트폴리오 이름, 정답과 무관)의 일부로 붙어 있으면
+    통과시키면 안 된다 - 실측(INST-09, 2026-09-06) 참고."""
+    if not _NUMERIC_NEEDLE_RE.match(needle):
+        return needle in text
+    core = needle.rstrip("%")
+    escaped = re.escape(core)
+    if needle.endswith("%"):
+        pattern = rf"(?<![A-Za-z0-9]){escaped}(?:\.0+)?\s*%(?![A-Za-z0-9])"
+    else:
+        # %를 안 붙이고 그냥 "70"이라고만 적은 기존 문항도 있으니, 뒤에 %가
+        # 붙은 형태("70%")까지는 같이 인정한다 - 안 붙어도(순수 숫자) 통과.
+        pattern = rf"(?<![A-Za-z0-9,]){escaped}(?:\.0+)?\s*%?(?![A-Za-z0-9])"
+    return re.search(pattern, text) is not None
+
+
+def _cited_doc_pages(text):
+    """"docNN p.N" 모양(따옴표·괄호·슬래시 등에 둘러싸여 있어도)을 전부 뽑는다.
+    retrieved_context의 "[institution/doc14 p.2]", think_trace의
+    "- doc14 p.2 (유사도 ...)", 폴백 답변의 "검색된 근거(doc27 p.4)에
+    따르면" 등 현재 코드가 실제로 쓰는 모든 표기 형태를 이 하나로 커버한다."""
+    return {(m.group(1), int(m.group(2))) for m in _DOC_PAGE_RE.finditer(text or "")}
+
+
 def check(case, payload):
     """(통과 여부, 실패 사유 목록, 진단 dict)
 
-    진단 dict: {"answer_pass": bool, "evidence_pass": bool,
-    "failure_type": str|None}. failure_type은 answer_pass가 False일 때만
-    채워진다 - "retrieval"(근거도 못 찾음) / "answer_assembly"(근거는
-    찾았는데 답변에 안 씀) / "routing"(경로·상품코드 자체가 틀림,
-    must/must_not과 무관) 중 하나."""
+    진단 dict: {"answer_pass": bool, "retrieval_pass": bool|None,
+    "citation_pass": bool|None, "failure_type": str|None}.
+    retrieval_pass/citation_pass는 case에 expected_evidence가 있을 때만
+    채워진다(없으면 None - 아직 근거 문서를 확인 안 한 문항). failure_type은
+    answer_pass가 False일 때만 채워진다 - "retrieval"(근거 문서 자체가
+    후보에 없었음) / "answer_assembly"(후보엔 있었는데 답변이 다른 근거를
+    인용했거나, 맞는 근거를 인용하고도 서술에서 빠뜨림) / "routing"(경로·
+    상품코드 자체가 틀림, must/must_not과 무관) 중 하나."""
     fails = []
     answer_text = str(payload.get("answer", ""))
     evidence_text = "\n".join(
@@ -101,9 +162,8 @@ def check(case, payload):
         fails.append("상품이 걸리면 안 되는 질문인데 상품을 인식함")
         routing_fail = True
 
-    must = case.get("must", [])
-    missing_in_answer = [s for s in must if s not in answer_text]
-    missing_in_evidence = [s for s in must if s not in evidence_text]
+    must = case.get("must_answer", case.get("must", []))
+    missing_in_answer = [s for s in must if not _answer_contains(answer_text, s)]
     for s in missing_in_answer:
         fails.append(f"'{s}' 답변에 없음")
     for s in case.get("must_not", []):
@@ -112,16 +172,35 @@ def check(case, payload):
 
     answer_pass = not missing_in_answer and not any(
         s in answer_text for s in case.get("must_not", []))
-    evidence_pass = not missing_in_evidence
+
+    expected_evidence = case.get("expected_evidence")
+    retrieval_pass = citation_pass = None
+    if expected_evidence:
+        expected_pairs = {(e["document_id"], e["page"]) for e in expected_evidence}
+        retrieval_pass = bool(expected_pairs & _cited_doc_pages(evidence_text))
+        citation_pass = bool(expected_pairs & _cited_doc_pages(answer_text))
+        if not answer_pass:
+            if not retrieval_pass:
+                fails.append("정답 근거 문서가 검색 후보군에 없음(retrieval_pass=False)")
+            elif not citation_pass:
+                fails.append("정답 근거 문서가 후보엔 있었지만 답변이 다른 근거를 인용함"
+                              "(citation_pass=False)")
 
     failure_type = None
     if routing_fail:
         failure_type = "routing"
     elif not answer_pass:
-        failure_type = "answer_assembly" if evidence_pass else "retrieval"
+        if expected_evidence:
+            failure_type = "retrieval" if not retrieval_pass else "answer_assembly"
+        else:
+            # expected_evidence가 없는 문항은 예전 방식(부분 문자열 기반)의
+            # 느슨한 힌트로만 가른다 - 근거 문서를 아직 확인 못 했으므로
+            # 강한 기준(retrieval_pass/citation_pass)을 적용할 근거가 없다.
+            evidence_hint = all(s in evidence_text for s in must)
+            failure_type = "answer_assembly" if evidence_hint else "retrieval"
 
-    diag = {"answer_pass": answer_pass, "evidence_pass": evidence_pass,
-            "failure_type": failure_type}
+    diag = {"answer_pass": answer_pass, "retrieval_pass": retrieval_pass,
+            "citation_pass": citation_pass, "failure_type": failure_type}
     return (not fails), fails, diag
 
 
@@ -147,7 +226,11 @@ def main():
         ok, fails, diag = check(c, payload)
         (passed if ok else failed).append((c, payload, fails, diag))
         mark = "통과" if ok else "실패"
-        tag = "" if ok else f" [{diag['failure_type']}]"
+        detail = ""
+        if not ok and diag["retrieval_pass"] is not None:
+            detail = (f" retrieval_pass={diag['retrieval_pass']}"
+                      f" citation_pass={diag['citation_pass']}")
+        tag = "" if ok else f" [{diag['failure_type']}]{detail}"
         print(f"[{mark}]{tag} {c['id']} ({c.get('category')}) {c['q']}"
               + (f"\n    - " + "\n    - ".join(fails) if fails else ""))
         if args.show_all or (args.show and not ok):
