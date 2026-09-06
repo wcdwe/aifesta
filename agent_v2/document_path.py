@@ -153,24 +153,58 @@ def _usable(hit: dict) -> bool:
     return True
 
 
+# 사용자는 "중도해지"의 준말로 그냥 "해지"라고 쓰기도 한다("연금저축
+# 해지 시 세금이 부과되나요?" - 실측). "해지"만으로는 이 코퍼스에 계약
+# 해지·판매 해지 등 무관한 용례가 너무 많아 검색 자체가 정답 문서를
+# 못 찾는다(중도해지/중도인출 같은 구체적 행위어가 있어야 검색도 되고
+# 가중치도 붙는다 - has_action_term_overlap 참고). 원문을 대체하지
+# 않고, 구체형을 덧붙인 검색을 "추가로" 한 번 더 돌려서 후보를
+# 넓힌다 - 원문 그대로의 검색 결과도 그대로 유지된다.
+_ACTION_TERM_EXPANSIONS = {"해지": "중도해지", "인출": "중도인출"}
+
+
+def _action_term_expansions(question: str) -> list[str]:
+    """"중도"가 이미 붙어 있으면(예: "중도에 해지") 확장하지 않는다 -
+    실측: "연금저축펀드를 중도에 해지하면..."에 "중도해지"를 또 얹으면
+    "중도"라는 조각이 이미 있는데도 겹쳐서 다른 subject(개인연금저축)
+    문서의 우연한 "중도해지" 일치까지 덩달아 더 무겁게 만들어 역효과가
+    났다. "중도"가 어디에도 없을 때만(=진짜 준말로 줄여 쓴 경우만)
+    확장한다."""
+    result = []
+    for bare, rich in _ACTION_TERM_EXPANSIONS.items():
+        prefix = rich[: len(rich) - len(bare)]
+        if bare in question and prefix not in question:
+            result.append(rich)
+    return result
+
+
 def retrieve_document_hits(question: str, doc_type: str,
                            product_code: str | None = None,
                            k: int = 10) -> list[dict]:
-    semantic = semantic_search(question, k=k, doc_type=doc_type, product_code=product_code)
-    lexical = lexical_search(question, k=k, doc_type=doc_type, product_code=product_code)
+    expansions = _action_term_expansions(question)
+    queries = [question] + [f"{question} {rich}" for rich in expansions]
     pooled: dict[tuple, dict] = {}
-    for ranked in (semantic, lexical):
-        for rank, hit in enumerate(ranked):
-            key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"))
-            current = pooled.setdefault(key, dict(hit, rrf=0.0))
-            current["rrf"] = current.get("rrf", 0.0) + 1.0 / (61 + rank)
-            current["score"] = max(current.get("score") or 0.0, hit.get("score") or 0.0)
+    for q in queries:
+        semantic = semantic_search(q, k=k, doc_type=doc_type, product_code=product_code)
+        lexical = lexical_search(q, k=k, doc_type=doc_type, product_code=product_code)
+        for ranked in (semantic, lexical):
+            for rank, hit in enumerate(ranked):
+                key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"))
+                current = pooled.setdefault(key, dict(hit, rrf=0.0))
+                current["rrf"] = current.get("rrf", 0.0) + 1.0 / (61 + rank)
+                current["score"] = max(current.get("score") or 0.0, hit.get("score") or 0.0)
     hits = [hit for hit in pooled.values() if _usable(hit)]
+    # 순위(coverage 등)를 매길 때도 확장어를 포함한 질문을 쓴다 - 검색
+    # 후보만 넓히고 채점은 원문 그대로("해지")로 하면, "해지"가 이
+    # 코퍼스에 워낙 흔해 변별력이 없어서 확장으로 겨우 찾아온 정답
+    # 후보가 순위표에서 다시 밀려난다(실측: doc30/31이 후보엔 들어와도
+    # coverage 랭킹에서 상위 6개 밖으로 밀렸다).
+    ranking_question = " ".join([question] + expansions)
     section_pattern = _RISK_SECTION if re.search(r"위험|원금", question) else _STRATEGY_SECTION
     hits.sort(
         key=lambda hit: (
             1 if section_pattern.search(hit.get("text") or "") else 0,
-            topic_coverage(hit, question), hit.get("rrf", 0.0), hit.get("score", 0.0),
+            topic_coverage(hit, ranking_question), hit.get("rrf", 0.0), hit.get("score", 0.0),
         ),
         reverse=True,
     )

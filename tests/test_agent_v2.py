@@ -804,20 +804,19 @@ class SimpleDocumentTests(unittest.TestCase):
             "연금저축을 중도해지하면 세금이 어떻게 되나요?",
             "연금저축펀드를 중도에 해지하면 어떤 세금을 내나요?",
             "연금저축 계약을 중도해지하면 어떤 세금이 부과되나요?",
+            # "중도" 없이 "해지"만 쓴 준말 - 한때는 이 낱말이 이 코퍼스에
+            # 워낙 흔해(계약 해지 등) 검색 자체가 정답을 못 찾았다.
+            # _action_term_expansions()가 "중도"가 전혀 안 보일 때만
+            # "중도해지"를 덧붙여 검색·순위 양쪽에 반영하도록 고쳐서
+            # 해결했다(과잉 확장 방지: "중도에 해지"처럼 이미 "중도"가
+            # 있으면 확장하지 않는다 - 안 그러면 다른 subject의 우연한
+            # "중도해지" 일치까지 덩달아 세져서 새 회귀가 났었다).
+            "연금저축 해지 시 세금이 부과되나요?",
         ]
         for question in questions:
             hits = retrieve_document_hits(question, "institution")
             self.assertTrue(hits, question)
             self.assertIn("기타소득세", hits[0].get("text", ""), question)
-
-    @unittest.expectedFailure
-    def test_early_termination_tax_without_jungdo_is_a_known_gap(self):
-        """"중도" 없이 "해지 시"만 쓰면 행위어 목록의 "중도해지"와 글자가
-        안 겹쳐서 아직 못 잡는다 - 알려진 한계로 남겨 둔다(동의어 처리를
-        넣으면 이 테스트가 통과로 바뀌어야 하고, 그때 xfail 표시를
-        지운다). 이 테스트가 실패(expected)하는 동안은 회귀가 아니다."""
-        hits = retrieve_document_hits("연금저축 해지 시 세금이 부과되나요?", "institution")
-        self.assertIn("기타소득세", hits[0].get("text", ""))
 
     @unittest.expectedFailure
     def test_early_termination_tax_subject_ambiguity_is_a_known_gap(self):
