@@ -116,6 +116,20 @@ RELEVANCE_RETRY_THRESHOLD = 0.30
 # 만회할 수 있게 한다.
 RRF_K = 60
 
+# 화제별 보조 검색어. 정답 문서가 표 제목처럼 짧고 건조한 문장이라
+# 자연어 질문과 어휘가 겹치지 않는 화제만 등록한다(실측: doc58 p.2
+# "퇴직연금 적립금의 70%까지만 투자가능한 운용방법" - "위험자산 투자한도가
+# 어떻게 되나요?"로는 top 60 안에도 안 들지만, "위험자산 투자한도 70%"
+# 같은 키워드형 질의로는 잡힌다). 질문 문장을 대체하지 않고 이 보조
+# 질의를 추가로 더 검색해서 후보를 넓힌다.
+_QUERY_EXPANSIONS = [
+    (re.compile(r"위험자산.*(?:한도|비중|퍼센트|%|담을)"), "위험자산 투자한도 70%"),
+]
+
+
+def _topic_expansion_queries(query: str) -> list[str]:
+    return [aux for pattern, aux in _QUERY_EXPANSIONS if pattern.search(query or "")]
+
 
 def route_search(query: str, k: int = 5) -> dict:
     """분류 결과에 따라 semantic_search / table_search를 호출하고 결과를 합쳐서 반환.
@@ -145,30 +159,39 @@ def route_search(query: str, k: int = 5) -> dict:
 
         두 점수는 척도가 달라서(코사인 유사도 vs bm25) 직접 더할 수 없다.
         각자의 순위만 가지고 1/(60+순위)를 더하는 방식(RRF)을 쓴다 - 어느
-        한쪽에서만 1등이어도 위로 올라오고, 양쪽에서 다 높으면 더 위로 간다."""
+        한쪽에서만 1등이어도 위로 올라오고, 양쪽에서 다 높으면 더 위로 간다.
+
+        일부 화제(예: 위험자산 투자한도)는 정답이 표 제목처럼 짧고
+        건조한 문장이라("퇴직연금 적립금의 70%까지만 투자가능한
+        운용방법") 자연어 질문("위험자산 투자한도가 어떻게 되나요?")과
+        어휘가 너무 달라 그 질문 그대로는 검색 후보에도 못 든다(실측:
+        top 60 안에도 없었다). _topic_expansion_queries()가 이런 화제를
+        알아보면 키워드형 보조 질의를 추가로 함께 검색한다."""
         pooled = {}
+        queries = [query] + _topic_expansion_queries(query)
         for doc_type in doc_types:
             product_code = classification["product_codes"][0] if (
                 doc_type == "products" and classification["product_codes"]
             ) else None
-            sem = semantic_search(query, k=k, doc_type=doc_type, product_code=product_code)
-            lex = lexical_search(query, k=k, doc_type=doc_type, product_code=product_code)
-            for ranked in (sem, lex):
-                for rank, hit in enumerate(ranked):
-                    key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"))
-                    cur = pooled.get(key)
-                    if cur is None:
-                        cur = dict(hit)
-                        cur.setdefault("score", 0.0)
-                        cur["rrf"] = 0.0
-                        pooled[key] = cur
-                    else:
-                        # 의미 검색 쪽 유사도는 살려 둔다(재검색 판단에 쓴다)
-                        if hit.get("score") is not None:
-                            cur["score"] = max(cur.get("score") or 0.0, hit["score"])
-                        if hit.get("bm25") is not None:
-                            cur["bm25"] = hit["bm25"]
-                    cur["rrf"] += 1.0 / (RRF_K + rank + 1)
+            for q in queries:
+                sem = semantic_search(q, k=k, doc_type=doc_type, product_code=product_code)
+                lex = lexical_search(q, k=k, doc_type=doc_type, product_code=product_code)
+                for ranked in (sem, lex):
+                    for rank, hit in enumerate(ranked):
+                        key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"))
+                        cur = pooled.get(key)
+                        if cur is None:
+                            cur = dict(hit)
+                            cur.setdefault("score", 0.0)
+                            cur["rrf"] = 0.0
+                            pooled[key] = cur
+                        else:
+                            # 의미 검색 쪽 유사도는 살려 둔다(재검색 판단에 쓴다)
+                            if hit.get("score") is not None:
+                                cur["score"] = max(cur.get("score") or 0.0, hit["score"])
+                            if hit.get("bm25") is not None:
+                                cur["bm25"] = hit["bm25"]
+                        cur["rrf"] += 1.0 / (RRF_K + rank + 1)
 
         # 사용자가 괄호 안에 정식 명칭처럼 긴 표현을 직접 적었다면 그
         # 표현을 실제로 포함한 근거를 우선한다. RRF 동점 때문에 같은
