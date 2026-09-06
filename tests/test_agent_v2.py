@@ -9,6 +9,7 @@ from agent_v2.document_path import (
 )
 from agent_v2.product_resolver import resolve_product
 from agent_v2.query_analyzer import parse_plan
+from agent_v2.executor import execute_plan
 from agent_v2.schemas import ValidationResult
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
@@ -77,7 +78,7 @@ class PreRouterTests(unittest.TestCase):
 class ValidationSchemaTests(unittest.TestCase):
     def test_pass_shape(self):
         result = ValidationResult(status="PASS", retry_action="NONE", errors=[])
-        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.status, "PASS", result.errors)
 
     def test_fail_requires_error(self):
         with self.assertRaises(ValueError):
@@ -130,6 +131,58 @@ class QueryAnalyzerTests(unittest.TestCase):
         "tools":[],"completeness":"single_answer",
         "plan":[{"step":1,"tool":"COMPARE","purpose":"비교","depends_on":[]}]}"""
         self.assertIsNone(parse_plan(raw, "두 상품 비교").plan)
+
+
+class PlanExecutorTests(unittest.TestCase):
+    def test_multi_filter_returns_all_matching_products(self):
+        raw = """{"intents":["조건검색"],"entities":{"account_type":"IRP"},
+        "product_mentions":[],"required_facts":["자산유형","5년 수익률"],
+        "filters":[
+        {"field":"account_type","operator":"eq","value":"IRP","source_text":"IRP에서 투자 가능"},
+        {"field":"asset_type","operator":"eq","value":"채권형","source_text":"채권형"},
+        {"field":"return_5y","operator":"is_not_null","value":null,"source_text":"5년 수익률이 존재"}],
+        "metrics":["return_5y"],"periods":["5년"],"sort":[],"limit":null,
+        "return_all":true,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["FILTER"],"completeness":"all_matches",
+        "plan":[{"step":1,"tool":"FILTER","purpose":"전체 조회","depends_on":[]}]}"""
+        question = "IRP에서 투자 가능하고 채권형이면서 5년 수익률이 존재하는 상품을 모두 찾아줘"
+        plan = parse_plan(raw, question).plan
+        result = execute_plan(question, plan)
+        self.assertEqual(result.status, "PASS")
+        self.assertGreater(result.tool_results["FILTER"]["count"], 0)
+        self.assertTrue(all(row["return_5y"] is not None for row in result.tool_results["FILTER"]["rows"]))
+
+    def test_unknown_filter_field_fails_closed(self):
+        raw = """{"intents":["조건검색"],"entities":{},"product_mentions":[],
+        "required_facts":[],"filters":[{"field":"future_profit","operator":"gte","value":10,
+        "source_text":"미래수익 10 이상"}],"metrics":[],"periods":[],"sort":[],
+        "limit":null,"return_all":true,"missing":{"for_personalization":[],"from_evidence":[]},
+        "gap_types":[],"answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["FILTER"],"completeness":"all_matches",
+        "plan":[{"step":1,"tool":"FILTER","purpose":"조회","depends_on":[]}]}"""
+        question = "미래수익 10 이상 상품"
+        result = execute_plan(question, parse_plan(raw, question).plan)
+        self.assertEqual(result.status, "FAIL")
+        self.assertIn("허용되지 않은", result.errors[0])
+
+    def test_two_resolved_products_can_be_compared(self):
+        raw = """{"intents":["비교"],"entities":{},"product_mentions":[
+        {"text":"미래에셋솔로몬장기국공채","role":"comparison_left","resolution_required":true},
+        {"text":"중장기국공채","role":"comparison_right","resolution_required":true}],
+        "required_facts":["위험등급","총보수"],"filters":[],"metrics":["risk_level","total_fee"],
+        "periods":[],"sort":[],"limit":null,"return_all":false,
+        "missing":{"for_personalization":[],"from_evidence":[]},"gap_types":[],
+        "answerable_now":true,"follow_ups":[],"safety_flags":[],
+        "tools":["RESOLVE","COMPARE"],"completeness":"all_matches","plan":[
+        {"step":1,"tool":"RESOLVE","purpose":"두 상품 식별","depends_on":[]},
+        {"step":2,"tool":"COMPARE","purpose":"동일 기준 비교","depends_on":[1]}]}"""
+        question = "미래에셋솔로몬장기국공채와 중장기국공채의 위험등급과 총보수를 비교해줘"
+        plan = parse_plan(raw, question).plan
+        result = execute_plan(question, plan)
+        self.assertEqual(result.status, "PASS", result.errors)
+        self.assertIn("KR5153420079", result.tool_results["COMPARE"])
+        self.assertIn("KR5153420105", result.tool_results["COMPARE"])
 
 
 class FastStructuredTests(unittest.TestCase):

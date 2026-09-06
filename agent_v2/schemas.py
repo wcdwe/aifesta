@@ -116,6 +116,24 @@ class RiskDecision(BaseModel):
     requires_llm_validation: bool = False
 
 
+class Evidence(BaseModel):
+    evidence_id: str
+    kind: Literal["resolution", "structured", "document", "calculation", "policy"]
+    content: str
+    source: str
+    product_code: str | None = None
+    class_code: str | None = None
+    page: int | None = None
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolExecutionResult(BaseModel):
+    status: Literal["PASS", "FAIL", "PARTIAL"]
+    tool_results: dict[str, Any] = Field(default_factory=dict)
+    evidence: list[Evidence] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+
+
 class ValidationErrorItem(BaseModel):
     criterion: str
     problem: str

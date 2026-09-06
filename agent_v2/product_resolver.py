@@ -68,6 +68,12 @@ def resolve_product(question: str) -> ProductResolution:
     requested_durations = _durations(question)
 
     if requested_durations:
+        # `미래에셋솔로몬장기국공채`처럼 정식명칭의 중간까지만 말하면 기존
+        # matcher가 0건일 수 있다. 상품군 후보를 보강한 뒤 기간을 엄격히
+        # 적용한다. 실제로 없는 `초장기`는 이 필터에서 여전히 0건이 된다.
+        family = _family_candidates(question)
+        known_codes = {item.product_code for item in candidates}
+        candidates.extend(item for item in family if item.product_code not in known_codes)
         duration_matches = [
             item for item in candidates
             if _duration(item.product_name) in requested_durations
