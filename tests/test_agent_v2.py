@@ -1,5 +1,8 @@
 import unittest
+import json
 from unittest.mock import patch
+
+from fastapi import HTTPException
 
 from agent_v2.pre_router import assess_risk, pre_route
 from agent_v2.document_path import (
@@ -19,6 +22,10 @@ from agent_v2.answer_generator import GenerationOutcome
 from agent_v2.orchestrator import try_agent_payload
 from agent_v2.query_analyzer import AnalysisOutcome
 from agent_v2.schemas import ToolExecutionResult
+from agent_v2.api_contract import ResponseCache, validate_api_response
+from agent_v2.telemetry import (
+    record_call, record_failure, record_success, reset_usage, usage_snapshot,
+)
 from agent_v2.structured_path import try_fast_structured
 from agent_v2.templates import build_policy_payload
 
@@ -380,6 +387,84 @@ class OrchestratorTests(unittest.TestCase):
         self.assertIsNotNone(body)
         self.assertEqual(len(calls), 1)
         self.assertIn("고위험 검증 LLM: PASS", body["think_trace"])
+
+
+class ApiCompletionTests(unittest.TestCase):
+    def setUp(self):
+        from api.server import response_cache
+        response_cache.clear()
+
+    @staticmethod
+    def _payload(question_id="Q", question="질문"):
+        return {
+            "question_id": question_id,
+            "question": question,
+            "retrieved_context": "근거",
+            "think_trace": "처리 경로",
+            "answer": "답변",
+            "route": "test",
+        }
+
+    def test_api_contract_requires_exact_string_fields(self):
+        good = self._payload()
+        good.pop("route")
+        self.assertEqual(validate_api_response(good)["answer"], "답변")
+        bad = dict(good, answer=123)
+        with self.assertRaises(ValueError):
+            validate_api_response(bad)
+
+    def test_lru_cache_uses_question_id_and_original_question(self):
+        cache = ResponseCache(max_size=2)
+        value = self._payload()
+        value.pop("route")
+        cache.put(value)
+        self.assertIsNotNone(cache.get("Q", "질문"))
+        self.assertIsNone(cache.get("Q", "다른 질문"))
+
+    def test_same_request_is_computed_once_and_cached(self):
+        from api.server import answer
+        calls = []
+
+        def fake_payload(question_id, question):
+            calls.append((question_id, question))
+            return self._payload(question_id, question)
+
+        with patch("api.server.answer_payload", side_effect=fake_payload):
+            first = answer("Q-cache", "같은 질문")
+            second = answer("Q-cache", "같은 질문")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(json.loads(first.body), json.loads(second.body))
+
+    def test_internal_exception_becomes_retryable_503(self):
+        from api.server import answer
+        with patch("api.server.answer_payload", side_effect=RuntimeError("비밀 내부 오류")):
+            with self.assertRaises(HTTPException) as caught:
+                answer("Q-error", "질문")
+        self.assertEqual(caught.exception.status_code, 503)
+        self.assertNotIn("비밀", str(caught.exception.detail))
+
+    def test_usage_is_added_to_think_trace(self):
+        from api.server import answer
+
+        def fake_payload(question_id, question):
+            record_call([{"role": "user", "content": "테스트 프롬프트"}])
+            record_success("테스트 출력")
+            return self._payload(question_id, question)
+
+        with patch("api.server.answer_payload", side_effect=fake_payload):
+            response = answer("Q-usage", "질문")
+        body = json.loads(response.body)
+        self.assertIn("호출 1회", body["think_trace"])
+        self.assertIn("문자 기반 추정", body["think_trace"])
+
+    def test_telemetry_tracks_failure_without_storing_prompt(self):
+        reset_usage()
+        record_call([{"role": "user", "content": "민감할 수 있는 원문"}])
+        record_failure()
+        snapshot = usage_snapshot()
+        self.assertEqual(snapshot.calls, 1)
+        self.assertEqual(snapshot.failed_calls, 1)
+        self.assertFalse(hasattr(snapshot, "prompt"))
 
 
 class QueryAnalyzerTests(unittest.TestCase):

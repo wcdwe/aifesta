@@ -33,7 +33,7 @@ import os
 import re
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
@@ -57,8 +57,11 @@ from agent_v2.document_path import (  # noqa: E402
 from agent_v2.structured_path import try_fast_structured  # noqa: E402
 from agent_v2.templates import build_policy_payload  # noqa: E402
 from agent_v2.orchestrator import try_agent_payload  # noqa: E402
+from agent_v2.api_contract import ResponseCache, validate_api_response  # noqa: E402
+from agent_v2.telemetry import reset_usage, usage_snapshot  # noqa: E402
 
 app = FastAPI(title="연금 Agent 평가용 API")
+response_cache = ResponseCache(max_size=256)
 
 MAX_CONTEXT_CHUNKS = 6
 MAX_TABLE_ROWS_SHOWN = 3
@@ -674,9 +677,29 @@ def answer_payload(question_id: str, question: str) -> dict:
 
 @app.get("/answer")
 def answer(question_id: str, question: str):
-    body = dict(answer_payload(question_id, question))
-    body.pop("route", None)  # 주최측 응답 스펙에 없는 필드라 빼고 내보낸다
-    return JSONResponse(content=body)
+    cached = response_cache.get(question_id, question)
+    if cached is not None:
+        return JSONResponse(content=cached)
+
+    reset_usage()
+    try:
+        body = dict(answer_payload(question_id, question))
+        body.pop("route", None)  # 주최측 응답 스펙에 없는 필드라 빼고 내보낸다
+        usage = usage_snapshot()
+        body["think_trace"] = str(body.get("think_trace", "")) + (
+            "\n8. LLM 사용량(문자 기반 추정): "
+            f"호출 {usage.calls}회, 실패 {usage.failed_calls}회, "
+            f"입력 약 {usage.estimated_input_tokens}토큰, "
+            f"출력 약 {usage.estimated_output_tokens}토큰"
+        )
+        validated = validate_api_response(body)
+    except Exception as exc:
+        # 내부 경로·키·원문 데이터는 응답에 노출하지 않는다. 5xx를 반환해
+        # 평가 서버가 일시 장애로 판단하고 재시도할 수 있게 한다.
+        raise HTTPException(status_code=503, detail="일시적인 처리 오류입니다.") from exc
+
+    response_cache.put(validated)
+    return JSONResponse(content=validated)
 
 
 @app.get("/health")

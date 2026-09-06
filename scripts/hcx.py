@@ -27,11 +27,14 @@
 import argparse
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 ENV_PATH = os.path.join(REPO_ROOT, ".env")
 
 DEFAULT_URL = "https://clovastudio.stream.ntruss.com/v3/chat-completions"
@@ -89,11 +92,16 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
     "답이 없다"와 "호출이 안 됐다"를 구분할 수 없고, 그 둘은 고객에게
     해야 할 말이 다르다."""
     global _consecutive_failures, _breaker_open
+    # 요청별 호출량은 API 응답 trace에만 요약하며 키·프롬프트 원문은 남기지 않는다.
+    from agent_v2.telemetry import record_call, record_failure, record_success
+    record_call(messages)
     load_dotenv()
     key = os.environ.get("NCP_CLOVASTUDIO_API_KEY")
     if not key:
+        record_failure()
         raise HcxError("NCP_CLOVASTUDIO_API_KEY가 없다(.env 확인)")
     if _breaker_open:
+        record_failure()
         raise HcxError(f"연속 {_consecutive_failures}회 실패해 호출을 멈춤"
                        " (엔드포인트에 닿지 않음)")
 
@@ -127,6 +135,7 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read().decode("utf-8")
             out = _content_of(raw)
+            record_success(out)
             _consecutive_failures = 0
             return out
         except urllib.error.HTTPError as e:
@@ -134,12 +143,14 @@ def chat(messages, max_tokens=900, temperature=0.1, top_p=0.8,
             last = HcxError(f"HTTP {e.code}: {detail}")
             if e.code not in RETRY_STATUS:
                 _note_failure()
+                record_failure()
                 raise last
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             last = HcxError(f"연결 실패: {e}")
         if attempt < len(RETRY_WAITS):
             time.sleep(RETRY_WAITS[attempt])
     _note_failure()
+    record_failure()
     raise last
 
 
