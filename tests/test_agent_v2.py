@@ -908,18 +908,31 @@ class SimpleDocumentTests(unittest.TestCase):
             "연금저축을 중도해지하면 세금이 어떻게 되나요?",
             "연금저축펀드를 중도에 해지하면 어떤 세금을 내나요?",
             "연금저축 계약을 중도해지하면 어떤 세금이 부과되나요?",
+            # "중도" 없이 "해지"만 쓴 준말 - 한때는 이 낱말이 이 코퍼스에
+            # 워낙 흔해(계약 해지 등) 검색 자체가 정답을 못 찾았다.
+            # _action_term_expansions()가 "중도"가 전혀 안 보일 때만
+            # "중도해지"를 덧붙여 검색·순위 양쪽에 반영하도록 고쳐서
+            # 해결했다(과잉 확장 방지: "중도에 해지"처럼 이미 "중도"가
+            # 있으면 확장하지 않는다 - 안 그러면 다른 subject의 우연한
+            # "중도해지" 일치까지 덩달아 세져서 새 회귀가 났었다).
+            "연금저축 해지 시 세금이 부과되나요?",
+            # "연금저축"(세제적격, 현행)과 "(구)개인연금저축"(소득공제
+            # 방식의 다른 상품)이 둘 다 "중도해지"+과세를 다루는 페이지가
+            # 있어서 낱말 겹침만으로는 구분이 안 됐다(실측: 이 질문이
+            # 개인연금저축의 이자소득 비과세 조항으로 샜었다) -
+            # topic_coverage()에 "질문이 개인연금저축/구형/소득공제를
+            # 명시하지 않았는데 후보가 그 상품 얘기면 감점"하는 규칙을
+            # 추가해 해결(institution_facts.py가 이 둘을 별도 subject로
+            # 분리해 둔 것과 같은 원리).
+            "연금저축 중도해지 시 과세는?",
         ]
         for question in questions:
             hits = retrieve_document_hits(question, "institution")
             self.assertTrue(hits, question)
             self.assertIn("기타소득세", hits[0].get("text", ""), question)
 
-    @unittest.expectedFailure
-    def test_early_termination_tax_without_jungdo_is_a_known_gap(self):
-        """"중도" 없이 "해지 시"만 쓰면 행위어 목록의 "중도해지"와 글자가
-        안 겹쳐서 아직 못 잡는다 - 알려진 한계로 남겨 둔다(동의어 처리를
-        넣으면 이 테스트가 통과로 바뀌어야 하고, 그때 xfail 표시를
-        지운다). 이 테스트가 실패(expected)하는 동안은 회귀가 아니다."""
+    def test_early_termination_tax_without_jungdo_is_resolved(self):
+        """팀원의 행위어 확장과 FactType 검색을 병합한 뒤에도 준말을 처리한다."""
         hits = retrieve_document_hits("연금저축 해지 시 세금이 부과되나요?", "institution")
         self.assertIn("기타소득세", hits[0].get("text", ""))
 

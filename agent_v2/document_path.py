@@ -86,6 +86,20 @@ def _term_weight(form: str) -> int:
     return base
 
 
+# "연금저축"이라고만 물으면 보통 세제적격 연금저축(현행, 세액공제)을
+# 가리킨다. "(구)개인연금저축"은 이름에 "연금저축"을 부분열로 포함하고
+# 있어 낱말 겹침만으로는 구분이 안 되지만, 실제로는 전혀 다른
+# 상품이다(소득공제 방식, 1994년 이전 가입분) - institution_facts.py도
+# 이 둘을 별도 subject로 분리해 뒀다(SUBJECT_ALIASES 참고). 질문에
+# "개인연금저축"/"구형"/"소득공제"가 없는데 후보 문서가 (구)개인연금저축
+# 얘기면 관련성을 깎는다 - 실측: "연금저축 중도해지 시 과세는?"에서
+# 이 상품 얘기(doc25)가 진짜 정답(연금저축의 기타소득세 16.5%)을
+# 낱말 겹침만으로 밀어냈다.
+_OLD_PENSION_SAVINGS_MARKER = re.compile(r"개인연금저축|구형\s*연금저축")
+_OLD_PENSION_SAVINGS_QUESTION_RE = re.compile(r"개인연금저축|구형|소득공제")
+_OLD_PENSION_SAVINGS_PENALTY = 8
+
+
 def topic_coverage(hit: dict, question: str) -> int:
     compact_text = re.sub(r"\s+", "", hit.get("text") or "").lower()
     tokens = [
@@ -102,6 +116,10 @@ def topic_coverage(hit: dict, question: str) -> int:
             (_term_weight(form) for form in forms if form in compact_text),
             default=0,
         )
+    if _OLD_PENSION_SAVINGS_MARKER.search(hit.get("text") or "") and not (
+        _OLD_PENSION_SAVINGS_QUESTION_RE.search(question or "")
+    ):
+        total -= _OLD_PENSION_SAVINGS_PENALTY
     return total
 
 
@@ -153,6 +171,31 @@ def _usable(hit: dict) -> bool:
     return True
 
 
+# 사용자는 "중도해지"의 준말로 그냥 "해지"라고 쓰기도 한다("연금저축
+# 해지 시 세금이 부과되나요?" - 실측). "해지"만으로는 이 코퍼스에 계약
+# 해지·판매 해지 등 무관한 용례가 너무 많아 검색 자체가 정답 문서를
+# 못 찾는다(중도해지/중도인출 같은 구체적 행위어가 있어야 검색도 되고
+# 가중치도 붙는다 - has_action_term_overlap 참고). 원문을 대체하지
+# 않고, 구체형을 덧붙인 검색을 "추가로" 한 번 더 돌려서 후보를
+# 넓힌다 - 원문 그대로의 검색 결과도 그대로 유지된다.
+_ACTION_TERM_EXPANSIONS = {"해지": "중도해지", "인출": "중도인출"}
+
+
+def _action_term_expansions(question: str) -> list[str]:
+    """"중도"가 이미 붙어 있으면(예: "중도에 해지") 확장하지 않는다 -
+    실측: "연금저축펀드를 중도에 해지하면..."에 "중도해지"를 또 얹으면
+    "중도"라는 조각이 이미 있는데도 겹쳐서 다른 subject(개인연금저축)
+    문서의 우연한 "중도해지" 일치까지 덩달아 더 무겁게 만들어 역효과가
+    났다. "중도"가 어디에도 없을 때만(=진짜 준말로 줄여 쓴 경우만)
+    확장한다."""
+    result = []
+    for bare, rich in _ACTION_TERM_EXPANSIONS.items():
+        prefix = rich[: len(rich) - len(bare)]
+        if bare in question and prefix not in question:
+            result.append(rich)
+    return result
+
+
 def retrieve_document_hits(question: str, doc_type: str,
                            product_code: str | None = None,
                            k: int = 10, fact_types: list[str] | None = None) -> list[dict]:
@@ -165,16 +208,21 @@ def retrieve_document_hits(question: str, doc_type: str,
         search_question += " 주요 투자위험 손실 위험요인"
     if "INVESTMENT_STRATEGY" in facts or "STRATEGY" in facts:
         search_question += " 투자목적 투자전략"
-    semantic = semantic_search(search_question, k=max(k, 8), doc_type=doc_type, product_code=product_code)
-    lexical = lexical_search(search_question, k=max(k, 8), doc_type=doc_type, product_code=product_code)
+    expansions = _action_term_expansions(question)
+    queries = [search_question] + [f"{search_question} {rich}" for rich in expansions]
     pooled: dict[tuple, dict] = {}
-    for ranked in (semantic, lexical):
-        for rank, hit in enumerate(ranked):
-            key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"))
-            current = pooled.setdefault(key, dict(hit, rrf=0.0))
-            current["rrf"] = current.get("rrf", 0.0) + 1.0 / (61 + rank)
-            current["score"] = max(current.get("score") or 0.0, hit.get("score") or 0.0)
+    for q in queries:
+        semantic = semantic_search(q, k=max(k, 8), doc_type=doc_type, product_code=product_code)
+        lexical = lexical_search(q, k=max(k, 8), doc_type=doc_type, product_code=product_code)
+        for ranked in (semantic, lexical):
+            for rank, hit in enumerate(ranked):
+                key = (hit.get("doc_id"), hit.get("page"), hit.get("chunk_id"))
+                current = pooled.setdefault(key, dict(hit, rrf=0.0))
+                current["rrf"] = current.get("rrf", 0.0) + 1.0 / (61 + rank)
+                current["score"] = max(current.get("score") or 0.0, hit.get("score") or 0.0)
     hits = [hit for hit in pooled.values() if _usable(hit)]
+    # 확장어는 검색뿐 아니라 관련성 순위에도 반영한다.
+    ranking_question = " ".join([search_question] + expansions)
     # 투자전략/위험 섹션 가산은 상품 투자설명서에만 적용한다. 제도 문서에
     # 적용하면 세제·절차 질문에서도 우연히 해당 표현이 든 페이지가 앞선다.
     section_pattern = None
@@ -192,7 +240,7 @@ def retrieve_document_hits(question: str, doc_type: str,
                 r"기타소득세|연금소득세|퇴직소득세|이자소득세|배당소득세|분리과세",
                 hit.get("text") or "",
             ) else 0,
-            topic_coverage(hit, search_question), hit.get("rrf", 0.0), hit.get("score", 0.0),
+            topic_coverage(hit, ranking_question), hit.get("rrf", 0.0), hit.get("score", 0.0),
         ),
         reverse=True,
     )
