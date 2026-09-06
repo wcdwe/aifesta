@@ -812,22 +812,20 @@ class SimpleDocumentTests(unittest.TestCase):
             # 있으면 확장하지 않는다 - 안 그러면 다른 subject의 우연한
             # "중도해지" 일치까지 덩달아 세져서 새 회귀가 났었다).
             "연금저축 해지 시 세금이 부과되나요?",
+            # "연금저축"(세제적격, 현행)과 "(구)개인연금저축"(소득공제
+            # 방식의 다른 상품)이 둘 다 "중도해지"+과세를 다루는 페이지가
+            # 있어서 낱말 겹침만으로는 구분이 안 됐다(실측: 이 질문이
+            # 개인연금저축의 이자소득 비과세 조항으로 샜었다) -
+            # topic_coverage()에 "질문이 개인연금저축/구형/소득공제를
+            # 명시하지 않았는데 후보가 그 상품 얘기면 감점"하는 규칙을
+            # 추가해 해결(institution_facts.py가 이 둘을 별도 subject로
+            # 분리해 둔 것과 같은 원리).
+            "연금저축 중도해지 시 과세는?",
         ]
         for question in questions:
             hits = retrieve_document_hits(question, "institution")
             self.assertTrue(hits, question)
             self.assertIn("기타소득세", hits[0].get("text", ""), question)
-
-    @unittest.expectedFailure
-    def test_early_termination_tax_subject_ambiguity_is_a_known_gap(self):
-        """"연금저축"(세제적격 연금저축)과 "개인연금저축"(다른 상품)이
-        둘 다 "중도해지"+과세를 다루는 페이지가 있어서, 표현에 따라
-        가끔 다른 상품 얘기로 새간다("연금저축 중도해지 시 과세는?" 실측
-        - 개인연금저축의 이자소득 비과세 조항으로 감. 정답은 아니지만
-        완전히 무관하지도 않다) - 짧은 접미사 정규화로는 못 가리는
-        subject 층위 모호함이라 알려진 한계로 남겨 둔다."""
-        hits = retrieve_document_hits("연금저축 중도해지 시 과세는?", "institution")
-        self.assertIn("기타소득세", hits[0].get("text", ""))
 
 
 class RagConditionsAnswerTests(unittest.TestCase):

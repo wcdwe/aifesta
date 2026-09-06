@@ -86,6 +86,20 @@ def _term_weight(form: str) -> int:
     return base
 
 
+# "연금저축"이라고만 물으면 보통 세제적격 연금저축(현행, 세액공제)을
+# 가리킨다. "(구)개인연금저축"은 이름에 "연금저축"을 부분열로 포함하고
+# 있어 낱말 겹침만으로는 구분이 안 되지만, 실제로는 전혀 다른
+# 상품이다(소득공제 방식, 1994년 이전 가입분) - institution_facts.py도
+# 이 둘을 별도 subject로 분리해 뒀다(SUBJECT_ALIASES 참고). 질문에
+# "개인연금저축"/"구형"/"소득공제"가 없는데 후보 문서가 (구)개인연금저축
+# 얘기면 관련성을 깎는다 - 실측: "연금저축 중도해지 시 과세는?"에서
+# 이 상품 얘기(doc25)가 진짜 정답(연금저축의 기타소득세 16.5%)을
+# 낱말 겹침만으로 밀어냈다.
+_OLD_PENSION_SAVINGS_MARKER = re.compile(r"개인연금저축|구형\s*연금저축")
+_OLD_PENSION_SAVINGS_QUESTION_RE = re.compile(r"개인연금저축|구형|소득공제")
+_OLD_PENSION_SAVINGS_PENALTY = 8
+
+
 def topic_coverage(hit: dict, question: str) -> int:
     compact_text = re.sub(r"\s+", "", hit.get("text") or "").lower()
     tokens = [
@@ -102,6 +116,10 @@ def topic_coverage(hit: dict, question: str) -> int:
             (_term_weight(form) for form in forms if form in compact_text),
             default=0,
         )
+    if _OLD_PENSION_SAVINGS_MARKER.search(hit.get("text") or "") and not (
+        _OLD_PENSION_SAVINGS_QUESTION_RE.search(question or "")
+    ):
+        total -= _OLD_PENSION_SAVINGS_PENALTY
     return total
 
 
